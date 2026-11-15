@@ -31,7 +31,10 @@ function Core.PrepareDeadTargetSound(macro, settings)
         or not C_Timer or type(C_Timer.After) ~= "function" then return end
     local exists, dead, player = UnitExists("target"), UnitIsDeadOrGhost("target"), UnitIsPlayer("target")
     if not readable(exists) or not readable(dead) or not readable(player)
-        or not exists or not dead or player then return end
+        or player then return end
+    -- A search can acquire and clear a corpse in the same secure action, even
+    -- when PreClick sees no target (or a living one). Inspect the action too.
+    if not macro:find("/cleartarget", 1, true) and (not exists or not dead) then return end
     soundSerial = soundSerial + 1
     local serial = soundSerial
     -- Target-frame events can arrive after PostClick. A short bounded window

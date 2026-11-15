@@ -30,10 +30,11 @@ class DeadTargetSoundTests(unittest.TestCase):
             assert(#unmuted==1 and unmuted[1]==567520)
         ''')
 
-    def test_living_players_absent_targets_disabled_and_noop_stay_audible(self):
+    def test_direct_living_selection_players_disabled_and_noop_stay_audible(self):
         self.prepare()
         self.lua.execute('''
             local function attempt() NS.Core.SetClickMacro(probe,macro,NS.app.db) end
+            macro='/targetexact Waldwolf'
             units.target.dead=false; attempt()
             units.target.dead=true; units.target.player=true; attempt()
             units.target=nil; attempt()
@@ -42,6 +43,30 @@ class DeadTargetSoundTests(unittest.TestCase):
             NS.app.db.muteDeadTargetSound=true
             macro='/tm [exists] !8'; attempt()
             assert(#muted==0)
+        ''')
+
+    def test_each_search_click_covers_dead_matches_found_during_the_macro(self):
+        self.prepare()
+        self.lua.execute('''
+            local master=NS.UI.master
+            for i=1,6 do
+                units.target=i%2==1 and {name='Dead Wolf',dead=true} or nil
+                master.scripts.PreClick(master,'LeftButton',false)
+                assert(master.attributes.macrotext1:find('/cleartarget [dead]',1,true))
+                assert(#muted==i, 'search began without muting a newly acquired corpse')
+                master.scripts.PostClick(master,'LeftButton',false)
+                flush()
+                assert(#unmuted==i)
+            end
+        ''')
+
+    def test_explicit_search_clearing_covers_a_living_initial_target(self):
+        self.prepare()
+        self.lua.execute('''
+            units.target.dead=false
+            NS.Core.SetClickMacro(probe,macro,NS.app.db)
+            assert(#muted==1)
+            flush(); assert(#unmuted==1)
         ''')
 
     def test_repeated_clicks_keep_mute_until_latest_cleanup(self):

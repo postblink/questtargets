@@ -90,6 +90,7 @@ function app:Refresh(forceResolution)
     UI.RenderMaster(self)
     UI.SyncFocusBinding(self)
     NS.QuestieTracker.Sync(self)
+    NS.EllesmereTracker.Sync(self)
     NS.RestedXP.Sync(self)
     NS.ItemTree.Sync(self)
     if self.pendingVisibility ~= nil then
@@ -146,6 +147,7 @@ function app:Poll()
         UI.UpdateStatus(self)
     end
     NS.QuestieTracker.Sync(self)
+    NS.EllesmereTracker.Sync(self)
     NS.RestedXP.Sync(self)
     NS.ItemTree.Sync(self)
 end
@@ -178,6 +180,7 @@ events:SetScript("OnEvent", function(_, event, loadedName)
     if event == "ADDON_LOADED" then
         if loadedName ~= addonName then
             if app.loggedIn then UI.RegisterSettings(app) end
+            if loadedName == "EllesmereUIQuestTracker" and app.db then app:Schedule() end
             if loadedName == "QuestieDB" and app.db then app:Schedule() end
             return
         end
@@ -225,10 +228,14 @@ events:SetScript("OnEvent", function(_, event, loadedName)
                     and angle * 180 / math.pi or 225}
         end
         app.db.minimapHidden = app.db.minimap.hide == true
+        app.db.ellesmereTrackerButtons = app.db.ellesmereTrackerButtons ~= false
+        local ellesmereOffset = app.db.ellesmereTrackerOffset
+        app.db.ellesmereTrackerOffset = type(ellesmereOffset) == "number" and ellesmereOffset == ellesmereOffset
+            and math.max(-240, math.min(240, math.floor(ellesmereOffset + 0.5))) or 0
         app.db.questieTrackerButtons = app.db.questieTrackerButtons ~= false
         local offset = app.db.questieTrackerOffset
         app.db.questieTrackerOffset = type(offset) == "number" and offset == offset
-            and math.max(-40, math.min(80, math.floor(offset + 0.5))) or 35
+            and math.max(-240, math.min(240, math.floor(offset + 0.5))) or 35
         app.db.restedXPIntegration = app.db.restedXPIntegration == true
         app.db.minimapStyle = nil -- remove the premature design-selection setting
         app.db.showTooltips = app.db.showTooltips == true

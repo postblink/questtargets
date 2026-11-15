@@ -10,7 +10,7 @@ class QuestTargetsTests(unittest.TestCase):
     def setUp(self):
         self.lua = LuaRuntime(unpack_returned_tuples=True)
         self.lua.execute((ROOT / 'tests/quest_targets_mock.lua').read_text(encoding='utf-8'))
-        for name in ('Core.lua', 'Locale.lua', 'Database.lua', 'Proximity.lua', 'Resolvers.lua', 'Scanner.lua', 'UI.lua', 'Resize.lua', 'Master.lua', 'QuestieTracker.lua', 'RestedXP.lua', 'ItemTree.lua', 'Diagnostics.lua', 'Main.lua'):
+        for name in ('Core.lua', 'Locale.lua', 'Database.lua', 'Proximity.lua', 'Resolvers.lua', 'Scanner.lua', 'UI.lua', 'Resize.lua', 'Master.lua', 'QuestieTracker.lua', 'EllesmereTracker.lua', 'RestedXP.lua', 'ItemTree.lua', 'Diagnostics.lua', 'Main.lua'):
             self.lua.execute('assert(loadstring(...))("QuestTargets", NS)',
                              (ROOT / 'QuestTargets' / name).read_text(encoding='utf-8'))
 
@@ -531,14 +531,22 @@ class QuestTargetsTests(unittest.TestCase):
             C_AddOns.GetAddOnMetadata=nil
             local sections={}
             local counts={section=0,checkbox=0,slider=0,dropdown=0,button=0,editbox=0,move=0}
+            local currentSection
+            local buttonOptions={showTooltips=true,showMinimap=true,questieTrackerButtons=true,
+                questieTrackerOffset=true,ellesmereTrackerButtons=true,ellesmereTrackerOffset=true}
             for _,item in ipairs(layout.initializers) do
                 local kind=item.data.kind
+                if kind=='section' then currentSection=item.data.name end
+                if item.data.setting then
+                    local key=item.data.setting.variable:gsub('^QUESTTARGETS_','')
+                    if buttonOptions[key] then assert(currentSection==NS.L('buttons')) end
+                end
                 counts[kind]=counts[kind]+1
                 if kind=='section' then sections[#sections+1]=item.data.name end
             end
             assert(table.concat(sections,'|')==table.concat({NS.L('display'),NS.L('window'),
                 NS.L('targetMarkers'),NS.L('buttons'),NS.L('hotkeys'),NS.L('language')},'|'))
-            assert(counts.section==6 and counts.checkbox==10 and counts.slider==5
+            assert(counts.section==6 and counts.checkbox==11 and counts.slider==6
                 and counts.dropdown==3 and counts.button==3 and counts.editbox==1)
             assert(counts.move==1, 'native move option missing')
             local soundSetting=nativeSettings.QUESTTARGETS_muteDeadTargetSound

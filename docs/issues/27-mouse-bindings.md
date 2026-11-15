@@ -11,6 +11,16 @@ the same modifier, conflict confirmation, saving and rollback path as keyboard
 input. Left/right click cancels, following Blizzard's primary-button convention.
 The original click/wheel handlers and wheel-enabled state are restored on
 completion, cancellation, hide, tab changes, row recycling and combat entry.
+
+Mouse input now runs through a temporary full-screen input button parented to
+UIParent at tooltip strata. It forwards clicks and wheel movement to the active
+assignment field, so the cursor can be anywhere in the game window. The opening
+click has already reached its release handler before the overlay is shown.
+Stopping capture hides the overlay and clears its assignment closures. The
+overlay's own OnHide also cancels capture, and combat entry follows the existing
+cancellation path. It is an ordinary frame and never replaces game input
+handlers. Tests exercise all six binding fields through this overlay, including
+modifiers, the wheel and cleanup on combat, tab change and external hide.
 The change affects all slots for master, focus and ItemTree bindings. No macro
 bytes, targeting logic, or Issue #30 sound behavior are changed.
 
@@ -27,7 +37,7 @@ combat/tab cancellation, and native settings on the five supported flavors.
 An in-game mouse-device and controller regression check remains necessary.
 
 The same report also requests a first-found-mob notification. That is a separate
-feature and remains open: a local sound requires defining when a mob counts as
+feature tracked in [issue #32](https://github.com/simonrath/questtargets/issues/32): a local sound requires defining when a mob counts as
 found, how identity is tracked, and when notifications reset. A real game ping
 also needs client support and permission checks. This commit fixes mouse capture
 without silently enabling or deciding the notification behavior.

@@ -96,6 +96,19 @@ It contains runtime Lua, XML, TOC, and texture files only. Tests, documentation,
 and QuestieDB are excluded. Legacy `-Flavor`, `-AddonOnly`, and `-CurseForge`
 arguments remain accepted and produce the same universal archive.
 
+Build a test package with a unique version and filename:
+
+```powershell
+./tools/package_quest_targets.ps1 -PreviewVersion 1.6.1
+```
+
+The ZIP name and its embedded TOC version include a UTC timestamp, such as
+`QuestTargets-1.6.1-preview.20261115-120000-123Z.zip`. This makes installed test
+builds distinguishable in the options heading. The source TOC is preserved.
+Existing archives are never overwritten. Use `-OutputDirectory <folder>` for
+another destination. Package tests build in temporary directories so they
+cannot replace downloaded release files.
+
 ## License
 
 [GNU GENERAL PUBLIC LICENSE](LICENSE) for Quest Targets only.

@@ -25,13 +25,16 @@ class MouseBindingTests(unittest.TestCase):
                         local control=panel[key]
                         local original=control:GetScript('OnClick')
                         original(control,'LeftButton')
-                        control.scripts.OnClick(control,mouse)
+                        local input=NS.UI.bindingCapture.overlay
+                        assert(input and input.parent==UIParent and input.allPoints)
+                        input.scripts.OnClick(input,mouse)
                         local target=key:find('focus') and 'QuestTargetsFocused'
                             or (key:find('itemTree') and 'QuestTargetsItemTree' or 'QuestTargetsMaster')
                         assert(GetBindingAction(binding)=='CLICK '..target..':LeftButton')
                         assert(not control.listening and saves==1)
                         assert(control:GetScript('OnClick')==original)
                         assert(control.clicks[1]=='LeftButtonUp')
+                        assert(not input:IsShown())
                     ''')
 
     def test_modifiers_wheel_and_cleanup(self):
@@ -40,17 +43,20 @@ class MouseBindingTests(unittest.TestCase):
             local control=panel.hotkey
             control.scripts.OnClick(control,'LeftButton')
             ctrlDown=true; altDown=true; shiftDown=true
-            control.scripts.OnClick(control,'Button4')
+            local input=NS.UI.bindingCapture.overlay
+            input.scripts.OnClick(input,'Button4')
             assert(GetBindingAction('CTRL-ALT-SHIFT-BUTTON4')=='CLICK QuestTargetsMaster:LeftButton')
             ctrlDown=false; altDown=false; shiftDown=false
             for _,delta in ipairs({1,-1}) do
                 control.scripts.OnClick(control,'LeftButton')
                 assert(control.mouseWheel)
                 assert(control.scripts.OnMouseWheel, 'wheel capture missing')
-                control.scripts.OnMouseWheel(control,delta)
+                input=NS.UI.bindingCapture.overlay
+                input.scripts.OnMouseWheel(input,delta)
                 assert(GetBindingAction(delta>0 and 'MOUSEWHEELUP' or 'MOUSEWHEELDOWN')
                     =='CLICK QuestTargetsMaster:LeftButton')
                 assert(not control.mouseWheel and not control.scripts.OnMouseWheel)
+                assert(not input:IsShown())
             end
         ''')
 
@@ -82,7 +88,7 @@ class MouseBindingTests(unittest.TestCase):
         ''')
 
     def test_combat_and_tab_change_cancel_mouse_capture(self):
-        for action in ('combat', 'tab'):
+        for action in ('combat', 'tab', 'hide'):
             with self.subTest(action=action):
                 self.setUp(); self.prepare()
                 self.lua.execute('action=...',action)
@@ -90,11 +96,17 @@ class MouseBindingTests(unittest.TestCase):
                     local control=panel.hotkey
                     local original=control:GetScript('OnClick')
                     original(control,'LeftButton')
+                    local input=NS.UI.bindingCapture.overlay
                     if action=='combat' then combat=true; event('PLAYER_REGEN_DISABLED')
+                    elseif action=='hide' then
+                        input:Hide()
+                        input.scripts.OnHide(input)
                     else NS.UI.SelectSettingsTab(1) end
                     assert(not control.listening and not control.mouseWheel)
                     assert(control:GetScript('OnClick')==original)
                     assert(not control.scripts.OnMouseWheel and saves==0)
+                    assert(not input:IsShown() and not input:GetScript('OnClick'))
+                    assert(not input:GetScript('OnMouseWheel'))
                 ''')
 
     def test_existing_wheel_handler_and_enabled_state_are_restored(self):

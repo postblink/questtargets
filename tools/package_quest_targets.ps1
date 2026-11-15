@@ -1,13 +1,19 @@
 param(
     [ValidateSet('All', 'Both', 'Classic', 'TBC', 'Mists', 'Forever', 'Retail', 'Minimal')][string]$Flavor = 'All',
     [switch]$AddonOnly,
-    [switch]$CurseForge
+    [switch]$CurseForge,
+    [ValidatePattern('^\d+\.\d+\.\d+$')][string]$PreviewVersion,
+    [string]$OutputDirectory
 )
 $ErrorActionPreference = 'Stop'
 $taskRoot = Split-Path -Parent $PSScriptRoot
 $taskAddon = Join-Path $taskRoot 'QuestTargets'
 $taskDist = Join-Path $taskRoot 'dist'
+if ($OutputDirectory) { $taskDist = [IO.Path]::GetFullPath($OutputDirectory) }
 $taskVersion = (Select-String -LiteralPath (Join-Path $taskAddon 'QuestTargets.toc') -Pattern '^## Version: (.+)$').Matches[0].Groups[1].Value
+if ($PreviewVersion) {
+    $taskVersion = $PreviewVersion + '-preview.' + [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss-fff') + 'Z'
+}
 $taskClientPins = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'client-versions.json') -Raw | ConvertFrom-Json
 $taskInterfaces = (Select-String -LiteralPath (Join-Path $taskAddon 'QuestTargets.toc') -Pattern '^## Interface: (.+)$').Matches[0].Groups[1].Value -split ',\s*'
 foreach ($taskClientPin in $taskClientPins.flavors.PSObject.Properties) {
@@ -15,7 +21,7 @@ foreach ($taskClientPin in $taskClientPins.flavors.PSObject.Properties) {
         throw "TOC interface differs from pinned $($taskClientPin.Name) client"
     }
 }
-$taskRuntimeFiles = @('QuestTargets.toc','Bindings.xml','Core.lua','Locale.lua','Database.lua','Proximity.lua','Resolvers.lua','Scanner.lua','UI.lua','Resize.lua','SettingsCaption.xml','Master.lua','QuestieTracker.lua','RestedXP.lua','ItemTree.lua','Diagnostics.lua','Main.lua','Textures/QuestCompassUp.tga','Textures/QuestCompassDown.tga','Textures/TransparencyEye.tga','Textures/FeedbackQR.tga')
+$taskRuntimeFiles = @('QuestTargets.toc','Bindings.xml','Core.lua','Locale.lua','Database.lua','Proximity.lua','Resolvers.lua','Scanner.lua','UI.lua','Resize.lua','SettingsCaption.xml','Master.lua','QuestieTracker.lua','EllesmereTracker.lua','RestedXP.lua','ItemTree.lua','Diagnostics.lua','Main.lua','Textures/QuestCompassUp.tga','Textures/QuestCompassDown.tga','Textures/TransparencyEye.tga','Textures/FeedbackQR.tga')
 $taskRuntimeFiles += @(Get-ChildItem -LiteralPath (Join-Path $taskAddon 'Libs') -File -Recurse | ForEach-Object {
     $_.FullName.Substring($taskAddon.Length + 1).Replace('\', '/')
 })
@@ -27,6 +33,16 @@ Add-Type -AssemblyName System.IO.Compression
 function Add-FileEntry($archive, [string]$sourcePath, [string]$entryName) {
     $entry = $archive.CreateEntry($entryName, [IO.Compression.CompressionLevel]::Optimal)
     $entry.LastWriteTime = [DateTimeOffset]::new(2026, 1, 1, 0, 0, 0, [TimeSpan]::Zero)
+    if ($PreviewVersion -and $entryName -eq 'QuestTargets/QuestTargets.toc') {
+        $text = [IO.File]::ReadAllText($sourcePath)
+        $text = [regex]::Replace($text, '(?m)^## Version: [^\r\n]+', ('## Version: ' + $taskVersion))
+        $target = $entry.Open()
+        try {
+            $bytes = [Text.UTF8Encoding]::new($false).GetBytes($text)
+            $target.Write($bytes, 0, $bytes.Length)
+        } finally { $target.Dispose() }
+        return
+    }
     $source = [IO.File]::OpenRead($sourcePath)
     $target = $entry.Open()
     try { $source.CopyTo($target) } finally { $target.Dispose(); $source.Dispose() }
@@ -40,7 +56,8 @@ foreach ($taskFlavor in $taskFlavors) {
         if (-not (Test-Path -LiteralPath (Join-Path $taskAddon $taskFile))) { throw "Missing source: $taskFile" }
     }
     $taskZip = Join-Path $taskDist "QuestTargets-$taskVersion.zip"
-    $stream = [IO.File]::Open($taskZip, [IO.FileMode]::Create)
+    # Never replace an existing release or preview, including concurrent builds.
+    $stream = [IO.File]::Open($taskZip, [IO.FileMode]::CreateNew)
     $archive = [IO.Compression.ZipArchive]::new($stream, [IO.Compression.ZipArchiveMode]::Create)
     try {
         foreach ($file in $taskFiles) {

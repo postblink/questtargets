@@ -30,10 +30,15 @@ def require_provider_cache():
 
 
 class PackageTests(unittest.TestCase):
+    def setUp(self):
+        folder = tempfile.TemporaryDirectory(prefix='quest-targets-package-test-')
+        self.addCleanup(folder.cleanup)
+        self.dist = Path(folder.name)
+
     def test_embedded_minimap_libraries_and_licenses_ship_in_universal_zip(self):
         self.build('All')
         version=next(line.split(': ',1)[1] for line in (ROOT/'QuestTargets/QuestTargets.toc').read_text(encoding='utf-8').splitlines() if line.startswith('## Version: '))
-        with zipfile.ZipFile(ROOT/'dist'/f'QuestTargets-{version}.zip') as archive:
+        with zipfile.ZipFile(self.dist/f'QuestTargets-{version}.zip') as archive:
             self.assertEqual(archive.read('QuestTargets/Textures/FeedbackQR.tga'),
                              (ROOT/'QuestTargets/Textures/FeedbackQR.tga').read_bytes())
             for source in (ROOT/'QuestTargets/Libs').rglob('*'):
@@ -88,18 +93,45 @@ class PackageTests(unittest.TestCase):
         require_powershell()
         result = subprocess.run(
             [POWERSHELL, '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
-             str(ROOT / 'tools/package_quest_targets.ps1'), '-Flavor', flavor, *extra],
+             str(ROOT / 'tools/package_quest_targets.ps1'), '-OutputDirectory', str(self.dist),
+             '-Flavor', flavor, *extra],
             cwd=ROOT, capture_output=True, text=True,
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
+    def test_existing_package_is_preserved(self):
+        require_powershell()
+        destination = self.dist / f'QuestTargets-{self.version}.zip'
+        destination.write_bytes(b'existing release')
+        result = subprocess.run(
+            [POWERSHELL, '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
+             str(ROOT / 'tools/package_quest_targets.ps1'), '-OutputDirectory', str(self.dist)],
+            cwd=ROOT, capture_output=True, text=True,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(destination.read_bytes(), b'existing release')
+
+    def test_previews_have_distinct_files_and_matching_installed_versions(self):
+        source_toc = (ROOT / 'QuestTargets/QuestTargets.toc').read_bytes()
+        for _ in range(2):
+            self.build('All', '-PreviewVersion', '1.6.1')
+        paths = list(self.dist.glob('QuestTargets-1.6.1-preview.*.zip'))
+        self.assertEqual(len(paths), 2)
+        for path in paths:
+            version = path.stem.removeprefix('QuestTargets-')
+            with zipfile.ZipFile(path) as archive:
+                self.assertIn(f'## Version: {version}'.encode(), archive.read('QuestTargets/QuestTargets.toc'))
+                self.assertIsNone(archive.testzip())
+        self.assertEqual((ROOT / 'QuestTargets/QuestTargets.toc').read_bytes(), source_toc)
+        self.assertFalse((self.dist / f'QuestTargets-{self.version}.zip').exists())
+
     def test_all_flavors_contain_only_quest_targets(self):
         self.build('All')
         for flavor in ('Classic', 'TBC', 'Mists', 'Forever', 'Retail'):
-            self.assertFalse((ROOT / 'dist' / f'QuestTargets-{self.version}-{flavor}.zip').exists())
+            self.assertFalse((self.dist / f'QuestTargets-{self.version}-{flavor}.zip').exists())
         for flavor in ('Retail', *HASHES):
             with self.subTest(flavor=flavor):
-                path = ROOT / 'dist' / f'QuestTargets-{self.version}.zip'
+                path = self.dist / f'QuestTargets-{self.version}.zip'
                 with zipfile.ZipFile(path) as package:
                     names = package.namelist()
                     self.assertTrue(names)
@@ -121,7 +153,7 @@ class PackageTests(unittest.TestCase):
 
     def test_default_build_also_contains_retail_without_questiedb(self):
         self.build('Retail')
-        package_path = ROOT / 'dist' / f'QuestTargets-{self.version}.zip'
+        package_path = self.dist / f'QuestTargets-{self.version}.zip'
         with zipfile.ZipFile(package_path) as package:
             self.assertEqual(package.testzip(), None)
             self.assertTrue(all(name.startswith('QuestTargets/') for name in package.namelist()))
@@ -173,7 +205,7 @@ class PackageTests(unittest.TestCase):
 
     def test_minimal_package_still_excludes_database_and_documents(self):
         self.build('Minimal', '-CurseForge')
-        with zipfile.ZipFile(ROOT / 'dist' / f'QuestTargets-{self.version}.zip') as package:
+        with zipfile.ZipFile(self.dist / f'QuestTargets-{self.version}.zip') as package:
             self.assertTrue(package.namelist())
             self.assertTrue(all(n.startswith('QuestTargets/') for n in package.namelist()))
             self.assertFalse(any(n.endswith('.md') for n in package.namelist()))

@@ -119,6 +119,11 @@ local function stopBindingCapture()
     local capture = UI.bindingCapture
     if not capture then return end
     UI.bindingCapture = nil
+    if capture.overlay then
+        capture.overlay:Hide()
+        capture.overlay:SetScript("OnClick", nil)
+        capture.overlay:SetScript("OnMouseWheel", nil)
+    end
     capture.button.listening = false
     capture.button:EnableKeyboard(false)
     setGamePadCapture(capture.button, false)
@@ -236,6 +241,27 @@ local function beginBindingCapture(button, app, focused, slot, refresh)
         end
     end)
     setGamePadCapture(button, true)
+    -- Mouse events only reach the frame under the cursor. A temporary ordinary
+    -- overlay receives them anywhere without modifying Blizzard input handlers.
+    if not UI.bindingOverlay then
+        local overlay = CreateFrame("Button", nil, UIParent)
+        overlay:SetAllPoints(UIParent)
+        overlay:SetFrameStrata("TOOLTIP")
+        overlay:SetFrameLevel(1000)
+        overlay:EnableMouse(true)
+        overlay:EnableMouseWheel(true)
+        overlay:RegisterForClicks("AnyUp")
+        overlay:SetScript("OnHide", function()
+            if UI.bindingCapture and UI.bindingCapture.overlay == overlay then stopBindingCapture() end
+        end)
+        UI.bindingOverlay = overlay
+    end
+    local overlay = UI.bindingOverlay
+    UI.bindingCapture.overlay = overlay
+    local mouseClick, mouseWheel = button:GetScript("OnClick"), button:GetScript("OnMouseWheel")
+    overlay:SetScript("OnClick", function(_, mouseButton) mouseClick(button, mouseButton) end)
+    overlay:SetScript("OnMouseWheel", function(_, delta) mouseWheel(button, delta) end)
+    overlay:Show()
     if not button.questTargetsHideHook then
         button.questTargetsHideHook = true
         button:HookScript("OnHide", function(self)
@@ -254,6 +280,7 @@ function UI.ToggleFocus(app, entry)
     end
     UI.RenderRows(app)
     UI.RenderFocus(app)
+    if NS.EllesmereTracker then NS.EllesmereTracker.UpdateFocusMarks(app) end
     if NS.QuestieTracker and NS.QuestieTracker.UpdateFocusMarks then
         NS.QuestieTracker.UpdateFocusMarks(app)
     end
@@ -680,7 +707,7 @@ function UI.LayoutSettings(app)
     local panel, master = UI.settings, UI.masterSettings
     panel.pages, panel.tabs, panel.groups = {}, {}, {}
     local keys = {"general", "targetMarkers", "buttons", "hotkeys"}
-    local heights = {750, 340, 864, 248}
+    local heights = {500, 340, 1174, 248}
     panel.body = CreateFrame("Frame", nil, panel, "BackdropTemplate")
     panel.body:SetPoint("TOPLEFT", 8, -78)
     panel.body:SetPoint("BOTTOMRIGHT", -8, 8)
@@ -721,29 +748,31 @@ function UI.LayoutSettings(app)
         panel.pages[index] = {scroll=scroll, content=content}
     end
     local general, markers, hotkeys = panel.pages[1].content, panel.pages[2].content, panel.pages[4].content
-    local display = settingsBox(general, "display", -32, 380)
-    local window = settingsBox(general, "window", -446, 125)
-    local language = settingsBox(general, "language", -605, 102)
+    local display = settingsBox(general, "display", -32, 125)
+    local window = settingsBox(general, "window", -191, 125)
+    local language = settingsBox(general, "language", -350, 102)
     local marking = settingsBox(markers, "targetMarkers", -32, 292)
-    local toggles = settingsBox(master, "buttons", -32, 130)
-    local appearance = settingsBox(master, "masterAppearance", -186, 84)
-    local dimensions = settingsBox(master, "buttonSize", -304, 220)
-    local caption = settingsBox(master, "caption", -558, 112)
-    local position = settingsBox(master, "masterMove", -704, 132)
+    local toggles = settingsBox(master, "buttons", -32, 440)
+    local appearance = settingsBox(master, "masterAppearance", -496, 84)
+    local dimensions = settingsBox(master, "buttonSize", -614, 220)
+    local caption = settingsBox(master, "caption", -868, 112)
+    local position = settingsBox(master, "masterMove", -1014, 132)
     master.positionGroup = position
     local bindings = settingsBox(hotkeys, "hotkeys", -32, 233)
     panel.groups = {display, window, language, marking, toggles, appearance, dimensions, caption, position, bindings}
     panel.displayText:Hide()
     panel.languageText:Hide()
     panel.hotkeysText:Hide()
-    for i, control in ipairs({panel.menuToggle, panel.transparencyToggle,
-        panel.tooltipToggle, panel.minimapToggle, panel.questieTrackerToggle}) do
+    for i, control in ipairs({panel.menuToggle, panel.transparencyToggle}) do
         place(control, display, 18, -32 - (i-1)*30)
     end
-    for i, control in ipairs({panel.masterToggle, panel.restedXPToggle, panel.itemTreeToggle}) do
+    for i, control in ipairs({panel.masterToggle, panel.restedXPToggle, panel.itemTreeToggle,
+        panel.tooltipToggle, panel.minimapToggle, panel.questieTrackerToggle}) do
         place(control, toggles, 18, -32 - (i-1)*30)
     end
-    place(panel.questieOffsetControl, display, 22, -193)
+    place(panel.questieOffsetControl, toggles, 22, -213)
+    place(panel.ellesmereToggle, toggles, 18, -303)
+    place(panel.ellesmereOffsetControl, toggles, 22, -333)
     place(panel.scaleControl, window, 22, -31)
     panel.scaleControl:SetPoint("TOPRIGHT", window, "TOPRIGHT", -22, -31)
     place(panel.languageDropdown, language, 2, -42)
@@ -1003,8 +1032,8 @@ local function nativeSettings(app)
         return localizedRow(Settings.CreateCheckbox(category, setting(key, "Boolean", default, get, set),
             descriptionKey and L(descriptionKey) or nil), key)
     end
-    local function sliderSetting(key, savedKey, minimum, maximum, step, pixels)
-        local value = setting(key, "Number", pixels and 35 or 1,
+    local function sliderSetting(key, savedKey, minimum, maximum, step, pixels, defaultValue)
+        local value = setting(key, "Number", defaultValue or (pixels and 35 or 1),
             function() return app.db[savedKey] end,
             function(nextValue)
                 app.db[savedKey] = nextValue
@@ -1044,27 +1073,6 @@ local function nativeSettings(app)
         if current == nil then current = not app.db.hidden end
         if current ~= value then app:Toggle() end
     end)
-    checkboxSetting("showTooltips", false, function() return app.db.showTooltips end,
-        function(value) app.db.showTooltips = value end)
-    checkboxSetting("showMinimap", true, function() return not app.db.minimapHidden end,
-        function(value)
-            app.db.minimapHidden = not value
-            UI.SetMinimapShown(app, value)
-        end)
-    local questieToggle = checkboxSetting("questieTrackerButtons", true,
-        function() return app.db.questieTrackerButtons end,
-        function(value)
-            if InCombatLockdown() or not addonLoaded("Questie") then return end
-            app.db.questieTrackerButtons = value
-            NS.QuestieTracker.Sync(app)
-        end)
-    questieToggle:AddModifyPredicate(function() return addonLoaded("Questie") end)
-    local questieOffset = sliderSetting("questieTrackerOffset", "questieTrackerOffset", -40, 80, 1, true)
-    questieOffset:SetParentInitializer(questieToggle)
-    questieOffset:AddModifyPredicate(function()
-        return addonLoaded("Questie") and app.db.questieTrackerButtons
-    end)
-
     section("window")
     checkboxSetting("transparencyMode", false,
         function() return app.db.transparencyMode end,
@@ -1085,6 +1093,42 @@ local function nativeSettings(app)
         function(value) app.db.muteDeadTargetSound = value end, "muteDeadTargetSoundTip")
 
     section("buttons")
+    checkboxSetting("showTooltips", false, function() return app.db.showTooltips end,
+        function(value) app.db.showTooltips = value end)
+    checkboxSetting("showMinimap", true, function() return not app.db.minimapHidden end,
+        function(value)
+            app.db.minimapHidden = not value
+            UI.SetMinimapShown(app, value)
+        end)
+    local questieToggle = checkboxSetting("questieTrackerButtons", true,
+        function() return app.db.questieTrackerButtons end,
+        function(value)
+            if InCombatLockdown() or not addonLoaded("Questie") then return end
+            app.db.questieTrackerButtons = value
+            NS.QuestieTracker.Sync(app)
+        end)
+    questieToggle:AddModifyPredicate(function() return addonLoaded("Questie") end)
+    local questieOffset = sliderSetting("questieTrackerOffset", "questieTrackerOffset", -240, 240, 1, true)
+    questieOffset:SetParentInitializer(questieToggle)
+    questieOffset:AddModifyPredicate(function()
+        return addonLoaded("Questie") and app.db.questieTrackerButtons
+    end)
+
+    local ellesmereToggle = checkboxSetting("ellesmereTrackerButtons", true,
+        function() return app.db.ellesmereTrackerButtons ~= false end,
+        function(value)
+            if InCombatLockdown() or not NS.EllesmereTracker.Available() then return end
+            app.db.ellesmereTrackerButtons = value
+            NS.EllesmereTracker.Sync(app)
+        end, "ellesmereTrackerTip")
+    ellesmereToggle:AddModifyPredicate(NS.EllesmereTracker.Available)
+
+    local ellesmereOffset = sliderSetting("ellesmereTrackerOffset", "ellesmereTrackerOffset", -240, 240, 1, true, 0)
+    ellesmereOffset:SetParentInitializer(ellesmereToggle)
+    ellesmereOffset:AddModifyPredicate(function()
+        return NS.EllesmereTracker.Available() and app.db.ellesmereTrackerButtons ~= false
+    end)
+
     checkboxSetting("showMaster", true, function() return not app.db.masterHidden end,
         function(value) app.db.masterHidden = not value; app:Schedule() end, "masterMoveTip")
     local restedXPToggle = checkboxSetting("restedXPIntegration", false,
@@ -1297,9 +1341,25 @@ function UI.RegisterSettings(app)
             NS.QuestieTracker.Sync(app)
             UI.UpdateSettings(app)
         end)
+        panel.ellesmereToggle = checkbox(panel, L("ellesmereTrackerButtons"), function()
+            if InCombatLockdown() or not NS.EllesmereTracker.Available() then return end
+            app.db.ellesmereTrackerButtons = not app.db.ellesmereTrackerButtons
+            NS.EllesmereTracker.Sync(app)
+            UI.UpdateSettings(app)
+        end)
+        panel.ellesmereToggle:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:SetText(L("ellesmereTrackerButtons"))
+            GameTooltip:AddLine(L("ellesmereTrackerTip"), 1, 1, 1, true)
+            GameTooltip:Show()
+        end)
+        panel.ellesmereToggle:SetScript("OnLeave", function() GameTooltip:Hide() end)
         panel.questieOffsetControl = settingsSlider(panel, "QuestTargetsQuestieOffsetSlider",
-            "questieTrackerOffset", -40, 80, 1, app)
+            "questieTrackerOffset", -240, 240, 1, app)
         panel.questieOffsetControl.caption:SetText(L("questieTrackerOffset"))
+        panel.ellesmereOffsetControl = settingsSlider(panel, "QuestTargetsEllesmereOffsetSlider",
+            "ellesmereTrackerOffset", -240, 240, 1, app)
+        panel.ellesmereOffsetControl.caption:SetText(L("ellesmereTrackerOffset"))
         panel.restedXPToggle = checkbox(panel, L("restedXPIntegration"), function()
             if InCombatLockdown() or not addonLoaded("RXPGuides") then return end
             app.db.restedXPIntegration = not app.db.restedXPIntegration
@@ -1489,6 +1549,15 @@ function UI.UpdateSettings(app)
     UI.settings.scaleControl:Refresh()
     UI.settings.tooltipToggle:SetChecked(app.db.showTooltips)
     UI.settings.minimapToggle:SetChecked(not app.db.minimapHidden)
+    local ellesmereAvailable = NS.EllesmereTracker.Available()
+    UI.settings.ellesmereToggle:SetChecked(app.db.ellesmereTrackerButtons ~= false)
+    UI.settings.ellesmereToggle:SetEnabled(ellesmereAvailable)
+    local ellesmereGray = ellesmereAvailable and 1 or 0.5
+    UI.settings.ellesmereToggle.caption:SetTextColor(ellesmereGray, ellesmereGray, ellesmereGray)
+    UI.settings.ellesmereOffsetControl:Refresh()
+    local ellesmereOffsetEnabled = ellesmereAvailable and app.db.ellesmereTrackerButtons ~= false
+    UI.settings.ellesmereOffsetControl.slider:SetEnabled(ellesmereOffsetEnabled)
+    UI.settings.ellesmereOffsetControl.edit:SetEnabled(ellesmereOffsetEnabled)
     local questieAvailable = addonLoaded("Questie")
     UI.settings.questieTrackerToggle:SetChecked(app.db.questieTrackerButtons)
     UI.settings.questieTrackerToggle:SetEnabled(questieAvailable)
@@ -1557,6 +1626,8 @@ function UI.ApplyLanguage(app)
         panel.transparencyToggle.caption:SetText(L("transparencyMode"))
         panel.tooltipToggle.caption:SetText(L("showTooltips"))
         panel.minimapToggle.caption:SetText(L("showMinimap"))
+        panel.ellesmereToggle.caption:SetText(L("ellesmereTrackerButtons"))
+        panel.ellesmereOffsetControl.caption:SetText(L("ellesmereTrackerOffset"))
         panel.questieTrackerToggle.caption:SetText(L("questieTrackerButtons"))
         panel.questieOffsetControl.caption:SetText(L("questieTrackerOffset"))
         panel.restedXPToggle.caption:SetText(L("restedXPIntegration"))

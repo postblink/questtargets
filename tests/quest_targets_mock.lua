@@ -249,7 +249,8 @@ function CreateFrame(kind, name, parent, template)
     assert(not combat, "created frame during combat")
     local f = create(parent)
     f.template = template
-    if template == "SecureActionButtonTemplate" or template == "UIPanelButtonTemplate,SecureActionButtonTemplate" then
+    if template == "SecureActionButtonTemplate" or template == "UIPanelButtonTemplate,SecureActionButtonTemplate"
+        or template == "SecureActionButtonTemplate,SecureHandlerStateTemplate" then
         f.secure = true
         if template == "UIPanelButtonTemplate,SecureActionButtonTemplate" then
             f.Left, f.Middle, f.Right = create(f), create(f), create(f)
