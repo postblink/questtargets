@@ -707,7 +707,7 @@ function UI.LayoutSettings(app)
     local panel, master = UI.settings, UI.masterSettings
     panel.pages, panel.tabs, panel.groups = {}, {}, {}
     local keys = {"general", "targetMarkers", "buttons", "hotkeys"}
-    local heights = {500, 340, 1174, 248}
+    local heights = {500, 340, 1204, 248}
     panel.body = CreateFrame("Frame", nil, panel, "BackdropTemplate")
     panel.body:SetPoint("TOPLEFT", 8, -78)
     panel.body:SetPoint("BOTTOMRIGHT", -8, 8)
@@ -752,11 +752,11 @@ function UI.LayoutSettings(app)
     local window = settingsBox(general, "window", -191, 125)
     local language = settingsBox(general, "language", -350, 102)
     local marking = settingsBox(markers, "targetMarkers", -32, 292)
-    local toggles = settingsBox(master, "buttons", -32, 440)
-    local appearance = settingsBox(master, "masterAppearance", -496, 84)
-    local dimensions = settingsBox(master, "buttonSize", -614, 220)
-    local caption = settingsBox(master, "caption", -868, 112)
-    local position = settingsBox(master, "masterMove", -1014, 132)
+    local toggles = settingsBox(master, "buttons", -32, 470)
+    local appearance = settingsBox(master, "masterAppearance", -526, 84)
+    local dimensions = settingsBox(master, "buttonSize", -644, 220)
+    local caption = settingsBox(master, "caption", -898, 112)
+    local position = settingsBox(master, "masterMove", -1044, 132)
     master.positionGroup = position
     local bindings = settingsBox(hotkeys, "hotkeys", -32, 233)
     panel.groups = {display, window, language, marking, toggles, appearance, dimensions, caption, position, bindings}
@@ -766,13 +766,13 @@ function UI.LayoutSettings(app)
     for i, control in ipairs({panel.menuToggle, panel.transparencyToggle}) do
         place(control, display, 18, -32 - (i-1)*30)
     end
-    for i, control in ipairs({panel.masterToggle, panel.restedXPToggle, panel.itemTreeToggle,
+    for i, control in ipairs({panel.masterToggle, panel.restedXPToggle, panel.polestarToggle, panel.itemTreeToggle,
         panel.tooltipToggle, panel.minimapToggle, panel.questieTrackerToggle}) do
         place(control, toggles, 18, -32 - (i-1)*30)
     end
-    place(panel.questieOffsetControl, toggles, 22, -213)
-    place(panel.ellesmereToggle, toggles, 18, -303)
-    place(panel.ellesmereOffsetControl, toggles, 22, -333)
+    place(panel.questieOffsetControl, toggles, 22, -243)
+    place(panel.ellesmereToggle, toggles, 18, -333)
+    place(panel.ellesmereOffsetControl, toggles, 22, -363)
     place(panel.scaleControl, window, 22, -31)
     panel.scaleControl:SetPoint("TOPRIGHT", window, "TOPRIGHT", -22, -31)
     place(panel.languageDropdown, language, 2, -42)
@@ -1140,6 +1140,15 @@ local function nativeSettings(app)
         end)
     restedXPToggle:AddModifyPredicate(function() return addonLoaded("RXPGuides") end)
 
+    local polestarToggle = checkboxSetting("polestarIntegration", false,
+        function() return app.db.polestarIntegration end,
+        function(value)
+            if InCombatLockdown() or not addonLoaded("Polestar") then return end
+            app.db.polestarIntegration = value
+            NS.RestedXP.Sync(app)
+        end)
+    polestarToggle:AddModifyPredicate(function() return addonLoaded("Polestar") end)
+
     local itemTreeToggle = checkboxSetting("showItemTreeButton", false,
         function() return app.db.itemTreeButton == true end,
         function(value)
@@ -1366,6 +1375,12 @@ function UI.RegisterSettings(app)
             NS.RestedXP.Sync(app)
             UI.UpdateSettings(app)
         end)
+        panel.polestarToggle = checkbox(panel, L("polestarIntegration"), function()
+            if InCombatLockdown() or not addonLoaded("Polestar") then return end
+            app.db.polestarIntegration = not app.db.polestarIntegration
+            NS.RestedXP.Sync(app)
+            UI.UpdateSettings(app)
+        end)
         panel.itemTreeToggle = checkbox(panel, L("showItemTreeButton"), function()
             if InCombatLockdown() or not addonLoaded("ItemTree") then return end
             app.db.itemTreeButton = not app.db.itemTreeButton
@@ -1572,6 +1587,11 @@ function UI.UpdateSettings(app)
     UI.settings.restedXPToggle:SetEnabled(restedXPAvailable)
     UI.settings.restedXPToggle.caption:SetTextColor(restedXPAvailable and 1 or 0.5,
         restedXPAvailable and 1 or 0.5, restedXPAvailable and 1 or 0.5)
+    local polestarAvailable = addonLoaded("Polestar")
+    UI.settings.polestarToggle:SetChecked(app.db.polestarIntegration)
+    UI.settings.polestarToggle:SetEnabled(polestarAvailable)
+    local polestarGray = polestarAvailable and 1 or 0.5
+    UI.settings.polestarToggle.caption:SetTextColor(polestarGray, polestarGray, polestarGray)
     local first, second = GetBindingKey(MASTER_BINDING)
     if not UI.settings.hotkey.listening then UI.settings.hotkey:SetText(bindingText(first)) end
     if not UI.settings.hotkey2.listening then UI.settings.hotkey2:SetText(bindingText(second)) end
@@ -1631,6 +1651,7 @@ function UI.ApplyLanguage(app)
         panel.questieTrackerToggle.caption:SetText(L("questieTrackerButtons"))
         panel.questieOffsetControl.caption:SetText(L("questieTrackerOffset"))
         panel.restedXPToggle.caption:SetText(L("restedXPIntegration"))
+        panel.polestarToggle.caption:SetText(L("polestarIntegration"))
         panel.itemTreeToggle.caption:SetText(L("showItemTreeButton"))
         panel.hotkeyNote:SetText(L("hotkeyNote"))
         panel.hotkeysText:SetText(L("hotkeys"))

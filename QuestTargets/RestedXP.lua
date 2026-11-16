@@ -64,6 +64,53 @@ local function currentNames(rxp, validNames)
     return names, guideFriendlyNames
 end
 
+-- Polestar's view includes applicability, completion and its chosen NPC.
+local function polestarNames(validNames)
+    local ps = _G.Polestar
+    local engine = ps and ps.Engine
+    if type(engine) ~= "table" or type(engine.GetStepIndex) ~= "function"
+        or type(engine.GetStepView) ~= "function" then return end
+    local ok, index = pcall(engine.GetStepIndex)
+    if not ok or type(index) ~= "number" then return {}, {} end
+    local got, view = pcall(engine.GetStepView, index, true)
+    if not got or type(view) ~= "table" or type(view.goals) ~= "table" then return {}, {} end
+    local raw = {}
+    if type(engine.GetGuide) == "function" then
+        local success, guide = pcall(engine.GetGuide)
+        local step = success and type(guide) == "table" and type(guide.steps) == "table" and guide.steps[index]
+        if type(step) == "table" and type(step.goals) == "table" then raw = step.goals end
+    end
+    local friendlyTypes = {accept=true, turnin=true, talk=true, train=true, vendor=true,
+        buy=true, auction=true, sethome=true, getfp=true, learn=true}
+    local names, friendly, seen = {}, {}, {}
+    for i, goal in ipairs(view.goals) do
+        if type(goal) == "table" and (goal.status == "active" or goal.status == "pending") then
+            local source = type(raw[i]) == "table" and raw[i] or {}
+            local kind = goal.t
+            if kind == "kill" or kind == "collect" or friendlyTypes[kind] then
+                local chosen = goal.npc ~= nil or goal.npcName ~= nil
+                local id, name
+                if chosen then id, name = goal.npc, goal.npcName
+                else id, name = source.npc, source.npcName end
+                if id and ps.Names and type(ps.Names.Npc) == "function" then
+                    local found, localized = pcall(ps.Names.Npc, id)
+                    if found and localized then name = localized end
+                end
+                if not name and kind == "kill" then name = goal.subject or source.target end
+                if not name and kind == "collect" and type(goal.source) == "table"
+                    and goal.source.kind == "npc" then name = goal.source.name end
+                name = Core.SafeName(name)
+                if name and not seen[name] then
+                    seen[name] = true
+                    names[#names + 1] = name
+                end
+                if name and friendlyTypes[kind] and not validNames[name] then friendly[name] = true end
+            end
+        end
+    end
+    return names, friendly
+end
+
 local function createButton()
     local button = CreateFrame("Button", "QuestTargetsRestedXPTarget", UIParent, "SecureActionButtonTemplate")
     button:RegisterForClicks("LeftButtonUp")
@@ -124,9 +171,12 @@ end
 function Integration.Sync(app)
     if InCombatLockdown() or not app.db or not UI.master then return end
     local rxp = app.db.restedXPIntegration and restedXP()
+    local polestar = not rxp and app.db.polestarIntegration and _G.Polestar
+        and type(_G.Polestar.Engine) == "table" and _G.Polestar.Engine
     local wasActive = Integration.active
-    Integration.active = rxp and true or false
-    if not rxp then
+    Integration.provider = rxp and "restedxp" or polestar and "polestar" or nil
+    Integration.active = Integration.provider ~= nil
+    if not Integration.active then
         Integration.targets = {}
         Integration.allEntry = nil
         Integration.signature = nil
@@ -143,12 +193,15 @@ function Integration.Sync(app)
     end
 
     local base = UI.master.defaultEntry or {}
-    local names, guideFriendlyNames = currentNames(rxp, base.names or {})
+    local names, guideFriendlyNames
+    if rxp then names, guideFriendlyNames = currentNames(rxp, base.names or {})
+    else names, guideFriendlyNames = polestarNames(base.names or {}) end
+    names, guideFriendlyNames = names or {}, guideFriendlyNames or {}
     local signatureParts = {}
     for i, target in ipairs(names) do
         signatureParts[i] = target .. (guideFriendlyNames[target] and ":friendly" or "")
     end
-    local signature = table.concat(signatureParts, "\n")
+    local signature = Integration.provider .. "\n" .. table.concat(signatureParts, "\n")
     if signature ~= Integration.signature then
         Integration.cursor = 1
         Integration.nativeCursor = 1
@@ -170,16 +223,21 @@ function Integration.Sync(app)
     local name = names[Integration.cursor]
     local finisher = name and (guideFriendlyNames[name]
         or (base.finisherNames and base.finisherNames[name] == true))
-    local guideEntry = name and {name=name, title=NS.L("restedXPButton"), questID=0,
+    local guideEntry = name and {name=name, title=NS.L(rxp and "restedXPButton" or "polestarButton"), questID=0,
         nameList={name}, names={[name]=true}, refs=base.refs or {},
         finisherNames=finisher and {[name]=true} or {},
         mobCount=finisher and 0 or 1, turnInCount=finisher and 1 or 0} or nil
     local entry = (not name or Integration.fallbackOnce) and base.name and base or guideEntry
     setMacro(UI.master, entry, app.db)
 
-    if not Integration.button then Integration.button = createButton() end
-    setMacro(Integration.button, entry, app.db)
-    Integration.button:Show()
+    if rxp then
+        if not Integration.button then Integration.button = createButton() end
+        setMacro(Integration.button, entry, app.db)
+        Integration.button:Show()
+    elseif Integration.button then
+        setMacro(Integration.button, nil, app.db)
+        Integration.button:Hide()
+    end
     UI.LayoutTargetButtons(app)
 end
 

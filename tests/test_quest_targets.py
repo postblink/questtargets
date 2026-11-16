@@ -546,8 +546,17 @@ class QuestTargetsTests(unittest.TestCase):
             end
             assert(table.concat(sections,'|')==table.concat({NS.L('display'),NS.L('window'),
                 NS.L('targetMarkers'),NS.L('buttons'),NS.L('hotkeys'),NS.L('language')},'|'))
-            assert(counts.section==6 and counts.checkbox==11 and counts.slider==6
+            assert(counts.section==6 and counts.checkbox==12 and counts.slider==6
                 and counts.dropdown==3 and counts.button==3 and counts.editbox==1)
+            local polestarSetting=nativeSettings.QUESTTARGETS_polestarIntegration
+            assert(polestarSetting.GetValue()==false)
+            polestarSetting.SetValue(true)
+            assert(not NS.app.db.polestarIntegration)
+            loadedAddons.Polestar=true
+            polestarSetting.SetValue(true)
+            assert(NS.app.db.polestarIntegration==true)
+            polestarSetting.SetValue(false)
+            assert(NS.app.db.polestarIntegration==false)
             assert(counts.move==1, 'native move option missing')
             local soundSetting=nativeSettings.QUESTTARGETS_muteDeadTargetSound
             assert(soundSetting.GetValue()==false)

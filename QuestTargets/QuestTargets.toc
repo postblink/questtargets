@@ -15,7 +15,7 @@
 ## Notes: Anklickbare Ziele für offene Quests.
 ## Author: jackNine
 ## Version: 1.6.1
-## OptionalDeps: QuestieDB, Questie, RXPGuides, ItemTree, EllesmereUIQuestTracker
+## OptionalDeps: QuestieDB, Questie, RXPGuides, Polestar, ItemTree, EllesmereUIQuestTracker
 ## SavedVariablesPerCharacter: QuestTargetsDB
 
 Libs/LibStub/LibStub.lua
