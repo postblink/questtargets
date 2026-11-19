@@ -314,7 +314,6 @@ class RestedXPTests(unittest.TestCase):
             NS.ItemTree.Sync(NS.app)
             assert(item:IsShown() and item:GetAlpha()==1)
             local size=button:GetWidth()
-            NS.app.db.masterAppearance='modern'
             NS.app.db.masterModernScale=1.5
             NS.UI.RenderMaster(NS.app)
             assert(button:GetWidth()>size and item:GetWidth()==button:GetWidth())

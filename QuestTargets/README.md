@@ -6,6 +6,26 @@ und Abgabe-NPCs.
 
 ## Installation
 
+### RareScanner auf WoW Forever
+
+Wenn RareScanner aktiviert ist, versucht ein normaler Linksklick auf dessen
+Rare-NPC-Symbol auf der Minimap, den Gegner anhand seines exakten Namens
+anzuvisieren. Der Gegner muss sich in Zielreichweite befinden. Ist kein
+passender Gegner erreichbar, bleibt das bisherige Ziel erhalten. Im Kampf
+ist diese Erweiterung inaktiv. Schätze, Ereignisse und Weltkarten-Symbole
+werden nicht verändert; der RareScanner-Tooltip bleibt verfügbar.
+Die Funktion ist automatisch aktiv und benötigt keine zusätzliche Einstellung.
+Beim Klick breitet sich ein kleiner Radarimpuls vom Symbol aus und verblasst.
+
+Ein normaler Linksklick auf ein Rare-Symbol auf der **Weltkarte** aktiviert
+RareScanners farbige Spawn-Markierung. Der violette **RareScanner Button** in
+der Zielleiste sucht alle aktiv markierten Rares. Bei langen Listen prüfen
+weitere Klicks die übrigen Namen. Ohne Ziel ist er grau und der Tooltip
+erklärt, wie man einen Rare markiert. Unter **Buttons → Show RareScanner Button**
+lässt sich der Kompass ausblenden.
+
+
+
 Das gemeinsame Paket `QuestTargets-<Version>.zip` funktioniert auf Classic, TBC,
 Mists, Forever und Retail. Es enthält ausschließlich `QuestTargets/`. Zum Aktualisieren das Spiel
 schließen und `Interface/AddOns/QuestTargets` durch den Ordner aus dem ZIP ersetzen.
@@ -101,21 +121,17 @@ und die gültigen Mobarten an.
 „Einstellungen“ oder `/qt settings` öffnet die native WoW-Addon-Optionsseite.
 In Retail, Classic Era, Burning Crusade, Mists of Pandaria und Forever erscheinen
 die Optionen als kompakte Liste mit nativen
-Abschnittsüberschriften, Checkboxen, Reglern, Dropdowns und Buttons. Der
-Schriftzug des klassischen Masterbuttons wird dort direkt im Textfeld geändert;
-Eingabe mit Enter oder durch Verlassen des Felds übernehmen, mit Escape verwerfen.
+Abschnittsüberschriften, Checkboxen, Reglern, Dropdowns und Buttons.
 Für ältere Clients ohne native Settings-Liste bleibt die Oberfläche mit internen
 Reitern als Fallback erhalten.
 Die RestedXP-Option ist ausgegraut, solange das Addon nicht geladen ist.
 
 Der Masterbutton unterstützt eine Tastenzuweisung einschließlich Kombinationen
 wie STRG+F. Im Eingabefeld löscht Entf oder Backspace eine bestehende Belegung;
-Escape bricht die Eingabe ab. Für den Masterbutton stehen zwei Darstellungen bereit:
-
-- **Klassisch:** nativer Textbutton mit unabhängig einstellbarer Breite und
-  Höhe sowie frei wählbarem, auch leerem Schriftzug.
-- **Modern:** Quest-Kompass mit ungedrückter und gedrückter Grafik, ohne
-  Schriftzug und mit einem gemeinsamen Größenfaktor für beide Achsen.
+Escape bricht die Eingabe ab. Der Masterbutton ist ein Quest-Kompass. Unter
+**Buttons → Zielleiste** stellst du ein, welche Buttons sichtbar sind, wie
+groß sie sind und wo die Leiste steht. Bronzerahmen und Trennlinien lassen
+sich unabhängig voneinander ein- und ausschalten.
 
 Die Standardsprache ist Englisch. Deutsch, Spanisch, Französisch, Türkisch
 und vereinfachtes Chinesisch sind ebenfalls auswählbar. Die Oberflächensprache

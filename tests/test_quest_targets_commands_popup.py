@@ -48,7 +48,7 @@ class CommandsPopupTests(unittest.TestCase):
             assert(NS.Language()==1)
             boot()
             assert(NS.Language()==1 and NS.L('settings')=='Settings')
-            assert(NS.app.db.masterText=='Target quest objective')
+            assert(NS.L('masterDefault')=='Target quest objective')
             NS.app.db.language='deDE'
             assert(NS.Language()==2 and NS.L('settings')=='Einstellungen')
         ''')

@@ -22,40 +22,132 @@ function UI.StyleTargetButton(button, red, green, blue)
     end)
 end
 
+local function layoutBarDividers(border, count, vertical, spacing, size)
+    if border.dividerCount == count and border.dividerVertical == vertical
+        and border.dividerSpacing == spacing and border.dividerSize == size then return end
+    border.dividerCount, border.dividerVertical = count, vertical
+    border.dividerSpacing, border.dividerSize = spacing, size
+    local length = math.max(8, size - 8)
+    local width = math.max(3, math.min(6, spacing))
+    for index = 1, count - 1 do
+        local divider = border.dividers[index]
+        if not divider then
+            divider = border:CreateTexture(nil, "OVERLAY")
+            divider:SetTexture("Interface\\AddOns\\QuestTargets\\Textures\\TargetBarDivider")
+            border.dividers[index] = divider
+        end
+        local position = 3 + index * (size + spacing) - spacing / 2
+        divider:ClearAllPoints()
+        if vertical then
+            divider:SetTexCoord(0, 1, 1, 1, 0, 0, 1, 0)
+            divider:SetSize(length, width)
+            divider:SetPoint("CENTER", border, "TOP", 0, -position)
+        else
+            divider:SetTexCoord(0, 1, 0, 1)
+            divider:SetSize(width, length)
+            divider:SetPoint("CENTER", border, "LEFT", position, 0)
+        end
+        divider:Show()
+    end
+    for index = count, #border.dividers do border.dividers[index]:Hide() end
+end
+
+local function updateBarDecoration(app, master, first, count, vertical, spacing)
+    local border = master.barBorder
+    local showBorder, showDividers = app.db.masterBorder, app.db.masterDividers and count > 1
+    if not first or not (showBorder or showDividers) then
+        if border and border:IsShown() then border:Hide() end
+        return
+    end
+    if not border then
+        border = CreateFrame("Frame", nil, first, "BackdropTemplate")
+        border:EnableMouse(false)
+        border:SetBackdrop({
+            edgeFile = "Interface\\AddOns\\QuestTargets\\Textures\\TargetBarBorder",
+            edgeSize = 6,
+        })
+        border.dividers = {}
+        master.barBorder = border
+    end
+    if border.borderVisible ~= showBorder then
+        border:SetBackdropBorderColor(1, 1, 1, showBorder and 1 or 0)
+        border.borderVisible = showBorder
+    end
+    local x, y = master.barOffsetX, master.barOffsetY
+    if border.barAnchor ~= first or border.barOffsetX ~= x or border.barOffsetY ~= y then
+        if border.barAnchor ~= first then border:SetParent(first) end
+        border:ClearAllPoints()
+        border:SetPoint("CENTER", first, "CENTER", x, y)
+        border.barAnchor, border.barOffsetX, border.barOffsetY = first, x, y
+    end
+    local width, height = master.barWidth + 6, master.barHeight + 6
+    if border:GetWidth() ~= width or border:GetHeight() ~= height then border:SetSize(width, height) end
+    layoutBarDividers(border, showDividers and count or 1, vertical, spacing, master:GetHeight())
+    if not border:IsShown() then border:Show() end
+end
+
 function UI.LayoutTargetButtons(app)
     local master = UI.master
     if not master or InCombatLockdown() then return end
     local width, height = master:GetWidth(), master:GetHeight()
-    local iconWidth = master.modernAppearance and height or math.floor(33 * app.db.masterScaleX + 0.5)
-    local previous = master:IsShown() and master or nil
-    local barWidth = previous and width or 0
+    local vertical = app.db.masterOrientation == "vertical"
+    local spacing = app.db.masterSpacing
+    local masterShown = master:IsShown()
+    local previous = masterShown and master or nil
+    local first = previous
+    local count = masterShown and 1 or 0
+    local barWidth, barHeight = 0, 0
+    if masterShown then barWidth, barHeight = width, height end
     local function place(button)
         if not button then return end
-        local anchor, edge = previous or master, previous and "RIGHT" or "CENTER"
-        if button.barAnchor ~= anchor or button.barEdge ~= edge then
-            button:ClearAllPoints()
-            button:SetPoint(previous and "LEFT" or "CENTER", anchor, edge, previous and 4 or 0, 0)
-            button.barAnchor, button.barEdge = anchor, edge
+        count = count + 1
+        first = first or button
+        local anchor = previous or master
+        local point, edge, x, y = "CENTER", "CENTER", 0, 0
+        if previous then
+            if vertical then point, edge, y = "TOP", "BOTTOM", -spacing
+            else point, edge, x = "LEFT", "RIGHT", spacing end
         end
-        if button:GetWidth() ~= iconWidth or button:GetHeight() ~= height then button:SetSize(iconWidth, height) end
-        barWidth = barWidth + (previous and 4 or 0) + iconWidth
+        if button.barAnchor ~= anchor or button.barEdge ~= edge or button.barGap ~= spacing then
+            button:ClearAllPoints()
+            button:SetPoint(point, anchor, edge, x, y)
+            button.barAnchor, button.barEdge, button.barGap = anchor, edge, spacing
+        end
+        if button:GetWidth() ~= width or button:GetHeight() ~= height then button:SetSize(width, height) end
+        local gap = previous and spacing or 0
+        if vertical then
+            barWidth = width
+            barHeight = barHeight + gap + height
+        else
+            barWidth = barWidth + gap + width
+            barHeight = height
+        end
         previous = button
     end
     local rested = NS.RestedXP.button
     place(rested and rested:IsShown() and rested)
     local item = NS.ItemTree.target
     place(item and item.inBar and item)
-    master.barWidth = barWidth
-    master.barOffset = math.max(0, barWidth - (master:IsShown() and width or iconWidth)) / 2
+    local rare = NS.RareScanner.markButton
+    place(rare and rare:IsShown() and rare)
+    local offsetX = vertical and 0 or math.max(0, barWidth - width) / 2
+    local offsetY = vertical and -math.max(0, barHeight - height) / 2 or 0
+    local changed = master.barWidth ~= barWidth or master.barHeight ~= barHeight
+        or master.barOffsetX ~= offsetX or master.barOffsetY ~= offsetY
+    master.barWidth, master.barHeight = barWidth, barHeight
+    master.barOffsetX, master.barOffsetY = offsetX, offsetY
+    updateBarDecoration(app, master, first, count, vertical, spacing)
+    if changed and UI.masterMoveActive then
+        if barWidth == 0 then UI.EndMasterMove(app, false)
+        else UI.UpdateMasterMove(app) end
+    end
 end
 
 function UI.RenderMaster(app)
     assert(not InCombatLockdown())
     if not UI.master then
-        local frame = CreateFrame("Button", "QuestTargetsMaster", UIParent, "UIPanelButtonTemplate,SecureActionButtonTemplate")
+        local frame = CreateFrame("Button", "QuestTargetsMaster", UIParent, "SecureActionButtonTemplate")
         UI.master = frame
-        frame:SetSize(140, 22)
-        frame:SetText(L("masterDefault"))
         frame:SetFrameStrata("MEDIUM")
         frame:SetClampedToScreen(true)
         frame:SetMovable(true)
@@ -64,11 +156,10 @@ function UI.RenderMaster(app)
         frame:RegisterForClicks("AnyUp")
         frame:SetAttribute("useOnKeyDown", false)
         frame:SetAttribute("type1", "macro")
-        frame.classicHighlight = frame:GetHighlightTexture()
-        -- UIPanelButtonTemplate renders its background with Left/Middle/Right.
-        -- Asset setters require paths, not Texture objects or nil in Forever.
         frame:SetNormalTexture(COMPASS_UP)
         frame:SetPushedTexture(COMPASS_DOWN)
+        frame:GetNormalTexture():SetAllPoints(frame)
+        frame:GetPushedTexture():SetAllPoints(frame)
         local pos = app.db.masterPosition
         if type(pos) == "table" and type(pos.x) == "number" and type(pos.y) == "number" then
             frame:SetPoint("CENTER", UIParent, "CENTER", pos.x, pos.y)
@@ -118,7 +209,8 @@ function UI.RenderMaster(app)
     end
     UI.ApplyPendingMasterMove(app)
     UI.StopMaster(app)
-    UI.PositionMaster(app)
+    local size = math.floor(60 * app.db.masterModernScale + 0.5)
+    if UI.master:GetWidth() ~= size then UI.master:SetSize(size, size) end
     UI.CreateMinimap(app)
     local entry = {title = L("active"), refs = {}, names = {}, nameList = {}, finisherNames = {}}
     for _, quest in ipairs(Core.QuestEntriesFor(app, true)) do
@@ -155,10 +247,6 @@ function UI.RenderMaster(app)
     UI.master:SetAttribute("macrotext1", (Core.EntryMacro(entry, app.db)))
     UI.master:SetShown(not app.db.masterHidden)
     UI.LayoutTargetButtons(app)
-    if UI.masterMoveActive then
-        if UI.master.barWidth == 0 then UI.EndMasterMove(app, false)
-        else UI.UpdateMasterMove(app) end
-    end
     UI.RenderFocus(app)
 end
 
@@ -193,30 +281,6 @@ function UI.RenderFocus(app)
     end
     UI.focusButton.entry = selected
     UI.focusButton:SetAttribute("macrotext1", (selected and Core.EntryMacro(selected, app.db) or ""))
-end
-
-function UI.PositionMaster(app)
-    local frame = UI.master
-    if not frame then return end
-    local modern = app.db.masterAppearance == "modern"
-    if frame.modernAppearance ~= modern then
-        frame:GetNormalTexture():SetAlpha(modern and 1 or 0)
-        frame:GetPushedTexture():SetAlpha(modern and 1 or 0)
-        for _, key in ipairs({"Left", "Middle", "Right"}) do
-            if frame[key] then frame[key]:SetAlpha(modern and 0 or 1) end
-        end
-        if frame.classicHighlight then frame.classicHighlight:SetAlpha(modern and 0 or 1) end
-        frame.modernAppearance = modern
-    end
-    if modern then
-        local size = math.floor(60 * app.db.masterModernScale + 0.5)
-        frame:SetSize(size, size)
-        frame:SetText("")
-    else
-        frame:SetSize(math.floor(210 * app.db.masterScaleX + 0.5),
-            math.floor(33 * app.db.masterScaleY + 0.5))
-        frame:SetText(app.db.masterText)
-    end
 end
 
 function UI.CreateMinimap(app)
@@ -290,15 +354,17 @@ function UI.UpdateMasterMove(app)
     if not UI.masterMoveActive or InCombatLockdown() then return end
     local edit, master = UI.masterMove, UI.master
     local width = master.barWidth or master:GetWidth()
-    local offset = master.barOffset or 0
-    edit:SetSize(math.max(380, width + 2 * offset + 12), master:GetHeight() + 112)
+    local height = master.barHeight or master:GetHeight()
+    local offsetX, offsetY = master.barOffsetX or 0, master.barOffsetY or 0
+    edit:SetSize(math.max(380, math.max(360, width) + 2 * math.abs(offsetX) + 12),
+        height + 2 * math.abs(offsetY) + 112)
     edit.outline:ClearAllPoints()
-    edit.outline:SetPoint("CENTER", edit, "CENTER", offset, 0)
-    edit.outline:SetSize(math.max(28, width + 8), math.max(28, master:GetHeight() + 8))
+    edit.outline:SetPoint("CENTER", edit, "CENTER", offsetX, offsetY)
+    edit.outline:SetSize(math.max(28, width + 8), math.max(28, height + 8))
     edit.grip:ClearAllPoints()
-    edit.grip:SetPoint("BOTTOM", edit, "CENTER", 0, master:GetHeight() / 2 + 8)
+    edit.grip:SetPoint("BOTTOM", edit, "CENTER", offsetX, offsetY + height / 2 + 8)
     edit.toolbar:ClearAllPoints()
-    edit.toolbar:SetPoint("TOP", edit, "CENTER", 0, -master:GetHeight() / 2 - 8)
+    edit.toolbar:SetPoint("TOP", edit, "CENTER", offsetX, offsetY - height / 2 - 8)
     edit.grip:SetText(L("masterMoveDrag"))
     edit.done:SetText(L("masterMoveDone"))
     edit.cancel:SetText(L("masterMoveCancel"))

@@ -93,6 +93,7 @@ function app:Refresh(forceResolution)
     NS.EllesmereTracker.Sync(self)
     NS.RestedXP.Sync(self)
     NS.ItemTree.Sync(self)
+    NS.RareScanner.SyncMark(self)
     if self.pendingVisibility ~= nil then
         UI.frame:SetShown(self.pendingVisibility)
         self.db.hidden = not self.pendingVisibility
@@ -150,6 +151,7 @@ function app:Poll()
     NS.EllesmereTracker.Sync(self)
     NS.RestedXP.Sync(self)
     NS.ItemTree.Sync(self)
+    NS.RareScanner.SyncMark(self)
 end
 
 function app:Help()
@@ -198,28 +200,24 @@ events:SetScript("OnEvent", function(_, event, loadedName)
         app.db.transparencyMode = app.db.transparencyMode == true
         app.db.watchedOnly = app.db.watchedOnly == true
         app.db.masterHidden = app.db.masterHidden == true
+        app.db.masterOrientation = app.db.masterOrientation == "vertical" and "vertical" or "horizontal"
+        local spacing = app.db.masterSpacing
+        app.db.masterSpacing = type(spacing) == "number" and spacing == spacing
+            and math.max(0, math.min(32, math.floor(spacing + 0.5))) or 4
+        app.db.masterBorder = app.db.masterBorder == true
+        if app.db.masterDividers == nil then app.db.masterDividers = app.db.masterBorder end
+        app.db.masterDividers = app.db.masterDividers == true
         app.db.actionBarMode = nil -- obsolete setting from the former docking mode
-        local legacyMasterScale = app.db.masterScaleBaseline ~= 2
-        for _, key in ipairs({"masterScaleX", "masterScaleY", "masterModernScale"}) do
-            local value = app.db[key]
-            if type(value) == "number" and value == value and value < math.huge then
-                if legacyMasterScale then value = math.floor(value / 1.5 * 100 + 0.5) / 100 end
-                app.db[key] = math.max(0.3, math.min(2, value))
-            else
-                app.db[key] = 1
-            end
+        local scale = app.db.masterModernScale
+        if type(scale) == "number" and scale == scale and scale < math.huge then
+            if app.db.masterScaleBaseline ~= 2 then scale = math.floor(scale / 1.5 * 100 + 0.5) / 100 end
+            app.db.masterModernScale = math.max(0.3, math.min(2, scale))
+        else
+            app.db.masterModernScale = 1
         end
         app.db.masterScaleBaseline = 2
-        app.db.masterTexture = nil
-        local title = app.db.masterText
-        if not app.db.language then
-            for _, oldDefault in ipairs({"Questziel anvisieren", "Apuntar a objetivo",
-                "Cibler l’objectif", "Görev hedefini seç", "选定任务目标"}) do
-                if title == oldDefault then title = nil; break end
-            end
-        end
-        app.db.masterAppearance = app.db.masterAppearance == "classic" and "classic" or "modern"
-        app.db.masterText = type(title) == "string" and Core.Clean(title) or NS.L("masterDefault")
+        app.db.masterAppearance, app.db.masterTexture, app.db.masterText = nil, nil, nil
+        app.db.masterScaleX, app.db.masterScaleY = nil, nil
         app.db.minimapHidden = app.db.minimapHidden == true
         if type(app.db.minimap) ~= "table" then
             local angle = app.db.minimapAngle
@@ -260,6 +258,7 @@ events:SetScript("OnEvent", function(_, event, loadedName)
         app.loggedIn = true
         UI.RegisterSettings(app)
         showMissingDatabase()
+        NS.PatchNotes.OnLogin()
         app:Schedule()
     elseif event == "PLAYER_LOGOUT" then
         Core.ReleaseDeadTargetSound()
@@ -280,6 +279,7 @@ events:SetScript("OnEvent", function(_, event, loadedName)
         UI.UpdateStatus(app)
     elseif event == "PLAYER_REGEN_ENABLED" then
         UI.RegisterSettings(app)
+        NS.PatchNotes.TryPending()
         UI.StopResizing(app)
         UI.StopMoving(app.db)
         app:Refresh(false)

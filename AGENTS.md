@@ -26,6 +26,22 @@ without the user's instruction. MCP name: `xerj-questtargets` (new sessions).
 
 # Releases and CurseForge notes
 
+Follow [the patch notes guide](docs/patch-notes-guide.md) for every change.
+Review whether the change affects players and update its target version in the
+same change when it does.
+
+Record every player-facing change in the German `CHANGELOG.md` under its
+target version. Write short bullets about controls, visible behavior and
+fixes, grouped by feature area under `###` headings. Keep related settings,
+controls and fixes together, and put the main feature area first. Put the newest
+version first and label preview notes `Vorschau` until the release date is known.
+Use Markdown bold for key features and controls.
+Update the corresponding bullets for all five other languages in
+`docs/changelog` in the same change. After editing, run
+`./tools/update_patch_notes.ps1` to update the in-game data. The package build
+checks that all six logs have the same versions, sections and bullet counts
+and that the generated data is current.
+
 For every new release, create `docs/curseforge/<version>.md` before tagging.
 Write concise English patchnotes for players: controls, visible behavior, fixes
 and supported clients. Describe effects rather than Lua functions, taint chains,
@@ -39,3 +55,11 @@ SHA256SUMS.txt in the GitHub release. Upload the ZIP once to CurseForge with
 all five supported game-version IDs. Never substitute GitHub-generated commit notes for player notes.
 Keep `tools/client-versions.json` compatible with each released ZIP. API tokens
 belong in GitHub Secrets, never in code, release notes, logs or chat.
+
+# Local WoW Forever installation
+
+After building a new Quest Targets preview or release for the user, install
+the built `QuestTargets` folder in
+`C:\Games\World of Warcraft\_forever_\Interface\AddOns`. Verify the installed
+version and confirm the installation to the user. Update only Quest Targets
+files from the package. This local installation step does not run in CI.

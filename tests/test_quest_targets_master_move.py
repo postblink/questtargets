@@ -102,26 +102,25 @@ class MasterMoveTests(unittest.TestCase):
             assert(not ui.masterMoveActive and not edit.shown and cursor==nil)
         ''')
 
-    def test_all_flavors_and_styles_keep_right_drag_in_edit_mode(self):
+    def test_all_flavors_keep_right_drag_in_edit_mode(self):
         for interface in (120100,11509,20506,50504,16001):
-            for style in ('classic','modern'):
-                with self.subTest(interface=interface,style=style):
-                    self.setUp()
-                    self.lua.execute(f"GetBuildInfo=function() return '', '', '', {interface} end; QuestTargetsDB={{masterAppearance='{style}',masterScaleBaseline=2,masterScaleX=0.3,masterScaleY=0.3,masterModernScale=0.3}}")
-                    self.prepare()
-                    self.lua.execute('''
-                        assert(type(NS.UI.BeginMasterMove)=='function', 'move mode missing')
-                        NS.UI.BeginMasterMove(NS.app)
-                        local master,edit=NS.UI.master,NS.UI.masterMove
-                        master.scripts.OnDragStart(master)
-                        assert(edit.dragging and not master.moving)
-                        edit.centerX=1050; edit.centerY=620
-                        master.scripts.OnDragStop(master)
-                        assert(not edit.dragging and NS.app.db.masterPosition==nil)
-                        edit.done.scripts.OnClick()
-                        assert(NS.app.db.masterPosition.x==150 and NS.app.db.masterPosition.y==120)
-                        assert(master.attributes.type1=='macro' and master.attributes.macrotext1)
-                    ''')
+            with self.subTest(interface=interface):
+                self.setUp()
+                self.lua.execute(f"GetBuildInfo=function() return '', '', '', {interface} end; QuestTargetsDB={{masterScaleBaseline=2,masterModernScale=0.3}}")
+                self.prepare()
+                self.lua.execute('''
+                    assert(type(NS.UI.BeginMasterMove)=='function', 'move mode missing')
+                    NS.UI.BeginMasterMove(NS.app)
+                    local master,edit=NS.UI.master,NS.UI.masterMove
+                    master.scripts.OnDragStart(master)
+                    assert(edit.dragging and not master.moving)
+                    edit.centerX=1050; edit.centerY=620
+                    master.scripts.OnDragStop(master)
+                    assert(not edit.dragging and NS.app.db.masterPosition==nil)
+                    edit.done.scripts.OnClick()
+                    assert(NS.app.db.masterPosition.x==150 and NS.app.db.masterPosition.y==120)
+                    assert(master.attributes.type1=='macro' and master.attributes.macrotext1)
+                ''')
 
     def test_fallback_options_start_mode_and_translate_visible_help(self):
         self.prepare()
@@ -160,18 +159,14 @@ class MasterMoveTests(unittest.TestCase):
             assert(ui.master.moving, 'stale drag stop interrupted next right drag')
         ''')
 
-    def test_position_options_fit_fallback_scroll_area_for_both_styles(self):
+    def test_position_options_fit_fallback_scroll_area(self):
         self.prepare()
         self.lua.execute('''
             NS.UI.Settings(NS.app)
             local panel=NS.UI.masterSettings
-            for _,style in ipairs({'classic','modern'}) do
-                NS.app.db.masterAppearance=style
-                NS.UI.UpdateMasterSettings(NS.app)
-                local group=panel.moveButton.parent
-                assert(panel.height>=math.abs(group.point[#group.point])+group.height,
-                    'move options outside scroll area: '..style)
-            end
+            local group=panel.moveButton.parent
+            assert(panel.height>=math.abs(group.point[#group.point])+group.height,
+                'move options outside scroll area')
         ''')
 
     def test_native_move_row_separates_title_help_and_action(self):

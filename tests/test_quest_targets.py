@@ -10,7 +10,7 @@ class QuestTargetsTests(unittest.TestCase):
     def setUp(self):
         self.lua = LuaRuntime(unpack_returned_tuples=True)
         self.lua.execute((ROOT / 'tests/quest_targets_mock.lua').read_text(encoding='utf-8'))
-        for name in ('Core.lua', 'Locale.lua', 'Database.lua', 'Proximity.lua', 'Resolvers.lua', 'Scanner.lua', 'UI.lua', 'Resize.lua', 'Master.lua', 'QuestieTracker.lua', 'EllesmereTracker.lua', 'RestedXP.lua', 'ItemTree.lua', 'Diagnostics.lua', 'Main.lua'):
+        for name in ('Core.lua', 'Locale.lua', 'PatchNotesData.lua', 'PatchNotes.lua', 'Database.lua', 'Proximity.lua', 'Resolvers.lua', 'Scanner.lua', 'UI.lua', 'Resize.lua', 'Master.lua', 'QuestieTracker.lua', 'EllesmereTracker.lua', 'RestedXP.lua', 'ItemTree.lua', 'RareScanner.lua', 'Diagnostics.lua', 'Main.lua'):
             self.lua.execute('assert(loadstring(...))("QuestTargets", NS)',
                              (ROOT / 'QuestTargets' / name).read_text(encoding='utf-8'))
 
@@ -48,21 +48,20 @@ class QuestTargetsTests(unittest.TestCase):
 
     def test_new_master_scale_reference_and_saved_size_migration(self):
         self.lua.execute('''
+            QuestTargetsDB={masterAppearance='classic',masterScaleX=1.2,masterScaleY=1.5,
+                masterModernScale=1.8,masterText='Legacy label',masterPosition={x=125,y=-42},
+                masterBorder=true}
             boot()
-            assert(NS.UI.master.width==210 and NS.UI.master.height==33)
-            assert(NS.app.db.masterScaleBaseline==2)
-        ''')
-        self.setUp()
-        self.lua.execute('''
-            QuestTargetsDB={masterAppearance="classic",masterScaleX=1.5,masterScaleY=1.5,masterModernScale=1.5}
-            boot()
-            assert(NS.app.db.masterScaleX==1 and NS.app.db.masterScaleY==1)
-            assert(NS.app.db.masterModernScale==1)
-            assert(NS.UI.master.width==210 and NS.UI.master.height==33)
-            NS.app.db.masterAppearance='modern'; NS.app:Refresh()
-            assert(NS.UI.master.width==60 and NS.UI.master.height==60)
+            local app, master = NS.app, NS.UI.master
+            assert(app.db.masterAppearance==nil and app.db.masterText==nil)
+            assert(app.db.masterScaleX==nil and app.db.masterScaleY==nil)
+            assert(app.db.masterModernScale==1.2 and app.db.masterScaleBaseline==2)
+            assert(master.width==72 and master.height==72 and not master.text)
+            assert(master.point[4]==125 and master.point[5]==-42)
+            assert(app.db.masterDividers==true)
+            app.db.masterDividers=false
             event('ADDON_LOADED','QuestTargets')
-            assert(NS.app.db.masterScaleX==1 and NS.app.db.masterModernScale==1)
+            assert(app.db.masterModernScale==1.2 and not app.db.masterDividers)
         ''')
 
     def test_transparency_reveals_icon_over_window_and_marks_drag_area(self):
@@ -472,7 +471,7 @@ class QuestTargetsTests(unittest.TestCase):
                     return item
                 end,
                 RegisterVerticalLayoutCategory=function(name)
-                    local category={name=name, GetID=function() return categoryID end,
+                    local category={name=name, layout=layout, GetID=function() return categoryID end,
                         SetName=function(self, value) self.name=value end}
                     nativeCategory=category
                     return category,layout
@@ -489,7 +488,7 @@ class QuestTargetsTests(unittest.TestCase):
                 CreateCheckbox=function(category, value, description)
                     local item=initializer({kind='checkbox',setting=value,
                         description=description})
-                    layout:AddInitializer(item)
+                    category.layout:AddInitializer(item)
                     return item
                 end,
                 CreateSliderOptions=function(minimum,maximum,step)
@@ -498,12 +497,12 @@ class QuestTargetsTests(unittest.TestCase):
                 end,
                 CreateSlider=function(category,value,options)
                     local item=initializer({kind='slider',setting=value,options=options})
-                    layout:AddInitializer(item)
+                    category.layout:AddInitializer(item)
                     return item
                 end,
                 CreateDropdown=function(category,value,choices)
                     local item=initializer({kind='dropdown',setting=value,choices=choices})
-                    layout:AddInitializer(item)
+                    category.layout:AddInitializer(item)
                     return item
                 end,
                 CreateControlTextContainer=function()
@@ -513,10 +512,24 @@ class QuestTargetsTests(unittest.TestCase):
                 end,
                 RegisterAddOnCategory=function(category) nativeRegistered=category; nativeRegistrations=(nativeRegistrations or 0)+1 end,
                 OpenToCategory=function(id) assert(id==categoryID); nativeOpened=id end}
+            local buttonsLayout={initializers={},AddInitializer=layout.AddInitializer}
+            if settingsTestInterface==16001 then
+                Settings.RegisterVerticalLayoutSubcategory=function(parent,name)
+                    assert(parent==nativeCategory)
+                    local subcategory={name=name,layout=buttonsLayout,SetName=function(self,value) self.name=value end}
+                    return subcategory,buttonsLayout
+                end
+            end
             nativeSettings={}
             boot()
             assert(nativeCategory and nativeRegistered==nativeCategory, 'Category missing at login')
             assert(nativeOpened==nil, 'Login must not open Options')
+            assert(not QuestTargetsPatchNotes)
+            NS.UI.nativePatchNotes.data.callback()
+            assert(QuestTargetsPatchNotes:IsShown())
+            assert(QuestTargetsPatchNotes.scripts.OnUpdate==nil)
+            QuestTargetsPatchNotes.close.scripts.OnClick()
+            assert(not QuestTargetsPatchNotes:IsShown())
             event('PLAYER_LOGIN'); event('ADDON_LOADED','Blizzard_Settings')
             assert(nativeRegistrations==1, 'Duplicate category registration')
             NS.UI.Settings(NS.app)
@@ -529,26 +542,43 @@ class QuestTargetsTests(unittest.TestCase):
             SettingsPanel:DisplayCategory({name='Other addon'})
             assert(headerTitle.text=='Other addon', 'Changed another addon heading')
             C_AddOns.GetAddOnMetadata=nil
+            if Settings.RegisterVerticalLayoutSubcategory then
+                assert(NS.UI.nativeButtonsCategory.layout==buttonsLayout)
+                assert(buttonsLayout.initializers[1].data.name==NS.L('buttons'))
+                assert(buttonsLayout.initializers[#buttonsLayout.initializers]==NS.UI.nativeMove)
+                for index,item in ipairs(layout.initializers) do
+                    if item.data.name==NS.L('hotkeys') then
+                        for offset,row in ipairs(buttonsLayout.initializers) do
+                            table.insert(layout.initializers,index+offset-1,row)
+                        end
+                        break
+                    end
+                end
+            end
             local sections={}
             local counts={section=0,checkbox=0,slider=0,dropdown=0,button=0,editbox=0,move=0}
             local currentSection
             local buttonOptions={showTooltips=true,showMinimap=true,questieTrackerButtons=true,
                 questieTrackerOffset=true,ellesmereTrackerButtons=true,ellesmereTrackerOffset=true}
+            local barOptions={showMaster=true,restedXPIntegration=true,showItemTreeButton=true,
+                showRareScannerButton=true,rareScannerZone=true,masterOrientation=true,
+                masterSpacing=true,masterBorder=true,masterDividers=true,buttonSize=true}
             for _,item in ipairs(layout.initializers) do
                 local kind=item.data.kind
                 if kind=='section' then currentSection=item.data.name end
                 if item.data.setting then
                     local key=item.data.setting.variable:gsub('^QUESTTARGETS_','')
                     if buttonOptions[key] then assert(currentSection==NS.L('buttons')) end
+                    if barOptions[key] then assert(currentSection==NS.L('targetBar')) end
                 end
                 counts[kind]=counts[kind]+1
                 if kind=='section' then sections[#sections+1]=item.data.name end
             end
             assert(table.concat(sections,'|')==table.concat({NS.L('display'),NS.L('window'),
-                NS.L('targetMarkers'),NS.L('buttons'),NS.L('hotkeys'),NS.L('language')},'|'))
-            assert(counts.section==6 and counts.checkbox==11 and counts.slider==6
-                and counts.dropdown==3 and counts.button==3 and counts.editbox==1)
-            assert(counts.move==1, 'native move option missing')
+                NS.L('targetMarkers'),NS.L('buttons'),NS.L('targetBar'),NS.L('hotkeys'),NS.L('language')},'|'))
+            assert(counts.section==7 and counts.checkbox==15 and counts.slider==5
+                and counts.dropdown==3 and counts.button==4 and counts.editbox==0)
+            assert(counts.move==2, 'expected move and patch note action rows')
             local soundSetting=nativeSettings.QUESTTARGETS_muteDeadTargetSound
             assert(soundSetting.GetValue()==false)
             soundSetting.SetValue(true)
@@ -670,6 +700,18 @@ class QuestTargetsTests(unittest.TestCase):
             assert(itemTreeRow.Buttons[1].enabled and itemTreeRow.Buttons[2].enabled)
             assert(itemTreeRow.Text.textColor[1]==1)
             itemTreeRow:Release()
+            local rareBinding
+            for _,item in ipairs(layout.initializers) do
+                if item.data.name==NS.L('rareScannerBinding') then rareBinding=item end
+            end
+            assert(rareBinding and not rareBinding.data.isEnabled())
+            local markingAvailable=NS.RareScanner.MarkingAvailable
+            NS.RareScanner.MarkingAvailable=function() return true end
+            assert(rareBinding.data.isEnabled())
+            rareBinding.data.callback(capture,2)
+            capture.scripts.OnKeyDown(capture,'K')
+            assert(GetBindingAction('K')=='CLICK QuestTargetsRareScannerMark:LeftButton')
+            NS.RareScanner.MarkingAvailable=markingAvailable
             local rows={}
             for _,initializer in ipairs({hotkeyButton,focusButton}) do
                 local row=CreateFrame('Frame',nil,UIParent)
@@ -696,31 +738,6 @@ class QuestTargetsTests(unittest.TestCase):
             for _,row in ipairs(rows) do row:Release() end
             StaticPopupDialogs[pendingPopup.which].OnAccept(pendingPopup,pendingPopup.data)
             assert(GetBindingAction('SPACE')=='JUMP', 'released row applied an obsolete confirmation')
-            local captionRow
-            for _,item in ipairs(layout.initializers) do
-                if item.data.kind=='editbox' then captionRow=item end
-            end
-            assert(captionRow.template=='QuestTargetsCaptionSettingTemplate')
-            assert(not captionRow.shownPredicate and captionRow.data.enabled())
-            captionRow.data.set('  Quest-Mobs  ')
-            flush()
-            assert(NS.app.db.masterText=='Quest-Mobs' and NS.UI.master.text=='Quest-Mobs')
-            captionRow.data.set('')
-            flush()
-            assert(NS.app.db.masterText=='' and NS.UI.master.text=='')
-            local captionFrame=CreateFrame('Frame',nil,UIParent)
-            captionFrame.Text=captionFrame:CreateFontString(nil,'ARTWORK')
-            for key,value in pairs(QuestTargetsCaptionSettingMixin) do captionFrame[key]=value end
-            captionFrame:OnLoad()
-            captionFrame:Init(captionRow)
-            assert(captionFrame.EditBox:GetText()=='')
-            captionFrame.EditBox:SetText('  Ziele  ')
-            captionFrame.EditBox.scripts.OnEditFocusLost(captionFrame.EditBox)
-            flush()
-            assert(NS.app.db.masterText=='Ziele' and NS.UI.master.text=='Ziele')
-            captionFrame.EditBox:SetText('Discard')
-            captionFrame.EditBox.scripts.OnEscapePressed(captionFrame.EditBox)
-            assert(captionFrame.EditBox:GetText()=='Ziele')
             for _,item in ipairs(layout.initializers) do
                 if item.data.kind=='checkbox' and
                     item.data.setting.variable=='QUESTTARGETS_restedXPIntegration' then
@@ -761,31 +778,16 @@ class QuestTargetsTests(unittest.TestCase):
             assert(NS.app.db.transparencyMode)
             nativeSettings.QUESTTARGETS_windowSize.SetValue(1.25)
             assert(NS.app.db.menuScale==1.25)
-            nativeSettings.QUESTTARGETS_masterAppearance.SetValue(2)
-            assert(NS.app.db.masterAppearance=='modern')
-            assert(captionRow.parentInitializer.data.setting.variable=='QUESTTARGETS_masterAppearance')
-            captionFrame:EvaluateState()
-            assert(captionFrame.EditBox.enabled==false)
-            captionFrame.EditBox:SetText('Must not overwrite caption')
-            captionFrame.EditBox.scripts.OnEditFocusLost(captionFrame.EditBox)
-            assert(NS.app.db.masterText=='Ziele')
-            captionFrame:Release()
-            for _,item in ipairs(layout.initializers) do
-                if item.data.kind=='slider' and item.data.setting.variable=='QUESTTARGETS_scaleFactor' then
-                    assert(not item.shownPredicate and item.predicate())
-                    assert(item.parentInitializer==captionRow.parentInitializer)
-                end
-                if item.data.kind=='slider' and item.data.setting.variable=='QUESTTARGETS_widthLabel' then
-                    assert(not item.shownPredicate and not item.predicate())
-                    assert(item.parentInitializer==captionRow.parentInitializer)
-                end
-            end
+            assert(not nativeSettings.QUESTTARGETS_masterAppearance and not nativeSettings.QUESTTARGETS_widthLabel
+                and not nativeSettings.QUESTTARGETS_heightLabel)
+            nativeSettings.QUESTTARGETS_buttonSize.SetValue(1.25)
+            flush()
+            assert(NS.UI.master.width==75 and NS.UI.master.height==75)
             nativeSettings.QUESTTARGETS_targetMarkers.SetValue(4)
             assert(NS.app.db.markerIcon==4)
             nativeSettings.QUESTTARGETS_language.SetValue(2)
             assert(NS.app.db.language=='deDE' and nativeCategory.name=='Quest Targets')
             assert(focusButton.data.tooltip==NS.L('focusHotkeyTip'))
-            assert(captionRow.data.name==NS.L('caption'))
             assert(moveRow.data.name==NS.L('masterMove') and moveRow.data.help==NS.L('masterMoveHelp'))
             assert(layout.initializers[1].data.name==NS.L('display'))
             for _,item in ipairs(layout.initializers) do
@@ -830,28 +832,24 @@ class QuestTargetsTests(unittest.TestCase):
 
     def test_size_numeric_inputs_clamp_round_and_reject_invalid_values(self):
         self.lua.execute('''boot(); NS.UI.Settings(NS.app)
-            local control=NS.UI.masterSettings.widthControl
+            local control=NS.UI.masterSettings.modernScaleControl
             local function enter(text)
                 control.edit:SetText(text)
                 control.edit.scripts.OnEnterPressed(control.edit)
                 flush()
             end
             enter('1,27')
-            assert(NS.app.db.masterScaleX==1.27 and NS.UI.master.width==267)
-            enter('99'); assert(NS.app.db.masterScaleX==2)
-            enter('-9'); assert(NS.app.db.masterScaleX==0.3)
-            enter('invalid'); assert(NS.app.db.masterScaleX==0.3)
+            assert(NS.app.db.masterModernScale==1.27 and NS.UI.master.width==76)
+            enter('99'); assert(NS.app.db.masterModernScale==2)
+            enter('-9'); assert(NS.app.db.masterModernScale==0.3)
+            enter('invalid'); assert(NS.app.db.masterModernScale==0.3)
             enter(''); assert(control.edit.text=='0.3')
-            enter('1e309'); assert(NS.app.db.masterScaleX==0.3)
+            enter('1e309'); assert(NS.app.db.masterModernScale==0.3)
             control.edit:SetText('1.5')
             control.edit.scripts.OnEscapePressed(control.edit)
-            assert(NS.app.db.masterScaleX==0.3 and control.edit.text=='0.3')
-            assert(NS.app.db.masterScaleY==1)
-            local modern=NS.UI.masterSettings
-            modern.modernButton.scripts.OnClick()
-            modern.modernScaleControl.slider:SetValue(1.5); flush()
+            assert(NS.app.db.masterModernScale==0.3 and control.edit.text=='0.3')
+            control.slider:SetValue(1.5); flush()
             assert(NS.UI.master.width==90 and NS.UI.master.height==90)
-            assert(not modern.captionGroup.shown)
         ''')
 
     def test_settings_tabs_work_without_modern_settings_api(self):
@@ -863,8 +861,8 @@ class QuestTargetsTests(unittest.TestCase):
             assert(legacyPanel==NS.UI.settings and legacyOpened==legacyPanel)
             NS.UI.SelectSettingsTab(3)
             assert(NS.UI.settings.pages[3].scroll.shown)
-            NS.UI.masterSettings.widthControl.slider:SetValue(1.5); flush()
-            assert(NS.UI.master.width==315)
+            NS.UI.masterSettings.modernScaleControl.slider:SetValue(1.5); flush()
+            assert(NS.UI.master.width==90 and NS.UI.master.height==90)
         ''')
 
     def test_compact_window_keeps_position_on_refresh_filter_and_scroll(self):
@@ -1080,11 +1078,11 @@ class QuestTargetsTests(unittest.TestCase):
     def test_new_defaults_modern_master_and_35_pixel_spacing(self):
         self.lua.execute("""
             QuestTargetsDB={}; boot()
-            assert(NS.app.db.masterAppearance=='modern')
+            assert(NS.app.db.masterModernScale==1 and NS.UI.master.width==60)
             assert(NS.app.db.questieTrackerOffset==35)
-            NS.app.db.masterAppearance='classic'; NS.app.db.questieTrackerOffset=0
+            NS.app.db.questieTrackerOffset=0
             event('ADDON_LOADED','QuestTargets')
-            assert(NS.app.db.masterAppearance=='classic' and NS.app.db.questieTrackerOffset==0)
+            assert(NS.app.db.questieTrackerOffset==0)
         """)
 
     def test_quest_window_resize_saves_dimensions_and_changes_list_capacity(self):
@@ -1133,41 +1131,81 @@ class QuestTargetsTests(unittest.TestCase):
     def test_modern_master_uses_two_compass_states_and_uniform_scale(self):
         self.lua.execute('''boot(); NS.UI.Settings(NS.app)
             local controls, master = NS.UI.masterSettings, NS.UI.master
-            local originalNormal, originalPushed = master.normalTexture, master.pushedTexture
-            assert(master.Left:GetAlpha() == 1 and master.Middle:GetAlpha() == 1 and master.Right:GetAlpha() == 1)
-            assert(master.normalTexture:GetAlpha() == 0 and master.pushedTexture:GetAlpha() == 0)
-            controls.modernButton.scripts.OnClick(); flush()
-            assert(NS.app.db.masterAppearance == 'modern')
-            assert(master.width == 60 and master.height == 60 and master.text == '')
-            assert(master.normalTexture.texture:find('QuestCompassUp', 1, true))
-            assert(master.pushedTexture.texture:find('QuestCompassDown', 1, true))
-            assert(master.normalTexture:GetAlpha() == 1 and master.pushedTexture:GetAlpha() == 1)
-            assert(master.Left:GetAlpha() == 0 and master.Middle:GetAlpha() == 0 and master.Right:GetAlpha() == 0)
-            assert(not controls.textEdit.shown and not controls.widthControl.shown)
+            local normal, pushed = master:GetNormalTexture(), master:GetPushedTexture()
+            assert(normal.texture:find('QuestCompassUp', 1, true))
+            assert(pushed.texture:find('QuestCompassDown', 1, true))
+            assert(master.width==60 and master.height==60 and not master.text)
+            assert(not master.Left and not master.Middle and not master.Right)
+            assert(not controls.classicButton and not controls.modernButton and not controls.textEdit)
             controls.modernScaleControl.slider:SetValue(1.1); flush()
-            assert(master.width == 66 and master.height == 66)
-            controls.classicButton.scripts.OnClick(); flush()
-            assert(master.width == 210 and master.height == 33 and master.text == 'Target quest objective')
-            assert(master.normalTexture == originalNormal and master.pushedTexture == originalPushed)
-            assert(master.normalTexture:GetAlpha() == 0 and master.pushedTexture:GetAlpha() == 0)
-            assert(master.Left:GetAlpha() == 1 and master.Middle:GetAlpha() == 1 and master.Right:GetAlpha() == 1)
-            assert(controls.textEdit.shown and controls.widthControl.shown)
+            assert(master.width==66 and master.height==66)
+            assert(master:GetNormalTexture()==normal and master:GetPushedTexture()==pushed)
+            assert(master.attributes.type1=='macro' and master.attributes.macrotext1)
         ''')
 
-    def test_saved_modern_style_loads_with_native_segmented_template(self):
-        self.lua.execute('''QuestTargetsDB={masterAppearance='modern'}; boot()
-            local master = NS.UI.master
-            assert(master.text == '' and master.width == master.height)
-            assert(master.normalTexture:GetAlpha() == 1 and master.pushedTexture:GetAlpha() == 1)
-            assert(master.Left:GetAlpha() == 0 and master.Middle:GetAlpha() == 0 and master.Right:GetAlpha() == 0)
-            assert(master.classicHighlight:GetAlpha() == 0)
-            assert(master.attributes.type1 == 'macro' and master.attributes.macrotext1)
+    def test_button_bar_options_reflow_secure_buttons_and_edit_outline(self):
+        self.lua.execute('''boot()
+            local app, ui = NS.app, NS.UI
+            local master, options = ui.master, ui.masterSettings
+            local rare = CreateFrame('Button', nil, UIParent, 'SecureActionButtonTemplate')
+            local item = CreateFrame('Button', nil, UIParent, 'SecureActionButtonTemplate')
+            item.inBar = true
+            NS.RareScanner.markButton, NS.ItemTree.target = rare, item
+            NS.RareScanner.SyncMark = function() end
+            NS.ItemTree.Sync = function() end
+            ui.LayoutTargetButtons(app)
+            assert(item.point[1]=='LEFT' and item.point[2]==master and item.point[4]==4)
+            assert(rare.point[2]==item and not master.barBorder)
+            dropdownChoices = {}
+            options.orientationDropdown.initialize()
+            dropdownChoices[2].func()
+            options.spacingControl.slider:SetValue(12)
+            options.borderToggle.scripts.OnClick()
+            flush()
+            assert(app.db.masterOrientation=='vertical' and app.db.masterSpacing==12 and app.db.masterBorder)
+            assert(item.point[1]=='TOP' and item.point[2]==master and item.point[3]=='BOTTOM' and item.point[5]==-12)
+            assert(rare.point[2]==item and rare.point[5]==-12)
+            assert(master.barWidth==60 and master.barHeight==204)
+            local border=master.barBorder
+            assert(border:IsShown() and border.parent==master and border.point[5]==-72)
+            assert(border.backdrop.edgeSize==6 and border.backdrop.edgeFile:find('TargetBarBorder',1,true))
+            assert(border.width==66 and border.height==210)
+            assert(not app.db.masterDividers and #border.dividers==0 and border.borderColor[4]==1)
+            assert(options.borderToggle.parent==options.dividersToggle.parent
+                and options.borderToggle.parent.localeKey=='targetBar')
+            options.dividersToggle.scripts.OnClick(); flush()
+            local divider=border.dividers[1]
+            assert(#border.dividers==2 and divider:IsShown() and border.dividers[2]:IsShown())
+            assert(divider.point[3]=='TOP' and divider.point[5]==-69 and divider.width==52 and divider.height==6)
+            options.borderToggle.scripts.OnClick(); flush()
+            assert(border:IsShown() and divider:IsShown() and border.borderColor[4]==0)
+            options.borderToggle.scripts.OnClick(); flush()
+            assert(ui.BeginMasterMove(app))
+            assert(ui.masterMove.outline.height==212 and ui.masterMove.outline.point[5]==-72)
+            ui.EndMasterMove(app, false)
+            app.db.masterHidden=true
+            app:Refresh()
+            assert(item.point[1]=='CENTER' and item.point[2]==master and rare.point[2]==item)
+            assert(border.parent==item and border.width==66 and border.height==138)
+            assert(divider:IsShown() and not border.dividers[2]:IsShown())
+            options.spacingControl.slider:SetValue(0); flush()
+            assert(rare.point[5]==0 and border.height==126)
+            app.db.masterOrientation='horizontal'; app:Refresh()
+            assert(border.width==126 and border.height==66 and border.point[4]==30)
+            assert(divider.point[3]=='LEFT' and divider.point[4]==63 and divider.width==3 and divider.height==52)
+            item.inBar=false; rare:Hide(); ui.LayoutTargetButtons(app)
+            assert(not border:IsShown())
+            rare:Show(); ui.LayoutTargetButtons(app)
+            assert(border:IsShown() and border.parent==rare and border.width==66)
+            assert(not divider:IsShown())
+            options.borderToggle.scripts.OnClick(); flush()
+            assert(not border:IsShown())
         ''')
 
     def test_master_stays_freely_positioned_and_keeps_hotkey_target(self):
         self.lua.execute('''boot(); NS.UI.Settings(NS.app)
             local master = NS.UI.master
-            assert(master.point[2] == UIParent and master.width == 210)
+            assert(master.point[2] == UIParent and master.width == 60)
             assert(NS.UI.settings.actionBarToggle == nil)
             assert(NS.app.db.actionBarMode == nil)
             local macro = master.attributes.macrotext1
@@ -1175,34 +1213,12 @@ class QuestTargetsTests(unittest.TestCase):
             master.scripts.OnDragStart(master)
             assert(master.moving)
             master.scripts.OnDragStop(master)
-            assert(master.point[2] == UIParent and master.width == 210)
-            assert(master.text == 'Target quest objective')
-        ''')
-
-    def test_master_settings_change_independent_size_and_label(self):
-        self.lua.execute('''boot(); NS.UI.Settings(NS.app)
-            assert(NS.UI.masterSettingsCategoryID == nil)
-            assert(NS.UI.settings.masterConfigButton == nil)
-            local controls, master = NS.UI.masterSettings, NS.UI.master
-            controls.widthControl.slider:SetValue(1.1); flush()
-            controls.heightControl.slider:SetValue(0.9); flush()
-            assert(NS.app.db.masterScaleX == 1.1 and NS.app.db.masterScaleY == 0.9)
-            assert(master.width == 231 and master.height == 30)
-            assert(controls.textureDropdown == nil)
-            assert(NS.app.db.masterTexture == nil)
-            controls.textEdit:SetText('Quest-Mobs')
-            controls.textEdit.scripts.OnEnterPressed(controls.textEdit); flush()
-            assert(NS.app.db.masterText == 'Quest-Mobs' and master.text == 'Quest-Mobs')
-            controls.textEdit:SetText('')
-            controls.textEdit.scripts.OnEnterPressed(controls.textEdit); flush()
-            assert(NS.app.db.masterText == '' and master.text == '')
-            NS.app:Refresh()
-            assert(NS.app.db.masterText == '')
-            assert(master.attributes.macrotext1:find('Waldwolf',1,true))
+            assert(master.point[2] == UIParent and master.width == 60)
+            assert(not master.text)
         ''')
 
     def test_all_six_languages_and_persistent_settings_choice(self):
-        self.lua.execute('''QuestTargetsDB={language='deDE',masterAppearance='classic'}; boot(); NS.UI.Settings(NS.app)
+        self.lua.execute('''QuestTargetsDB={language='deDE'}; boot(); NS.UI.Settings(NS.app)
             local labels={'English','Deutsch','Español','Français','Türkçe','简体中文'}
             local codes={'enUS','deDE','esES','frFR','trTR','zhCN'}
             for index, code in ipairs(codes) do
@@ -1224,16 +1240,15 @@ class QuestTargetsTests(unittest.TestCase):
             assert(NS.UI.feedbackButton.text==NS.L('feedback'))
             assert(NS.UI.settings.toggle.caption.text==NS.L('autoMark'))
             assert(NS.UI.settings.hotkeysText.text==NS.L('hotkeys'))
-            assert(NS.UI.master.text==NS.L('masterDefault'))
+            assert(not NS.UI.master.text)
             NS.app:Refresh()
             assert(NS.UI.filter.text==NS.L('all'))
             dropdownChoices[1].func()
             assert(NS.app.db.language=='enUS' and not reloaded)
             assert(NS.UI.settings.toggle.caption.text=='Automatically mark targets')
             assert(NS.UI.feedbackButton.text=='Feedback')
-            NS.app.db.masterText='Mein Button'
             dropdownChoices[4].func()
-            assert(NS.app.db.language=='frFR' and NS.UI.master.text=='Mein Button')
+            assert(NS.app.db.language=='frFR' and not NS.UI.master.text)
             assert(NS.UI.settings.languageDropdown.selectedID==4)
             dropdownChoices[2].func()
             assert(NS.app.db.language=='deDE' and not reloaded)
