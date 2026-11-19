@@ -4,6 +4,14 @@ Spielerchronik ab der ersten belegten Veröffentlichung. Die neueste Version ste
 
 [English](docs/changelog/enUS.md) · [Español](docs/changelog/esES.md) · [Français](docs/changelog/frFR.md) · [Türkçe](docs/changelog/trTR.md) · [简体中文](docs/changelog/zhCN.md)
 
+## 1.7.2 – 19.11.2026
+
+### RareScanner
+- **Nächste Rares zuerst:** Der violette Button sortiert markierte Rares und die Gebietsliste nach der Entfernung zum nächsten bekannten RareScanner-Spawnpunkt. So landen nahe Rares früher im Suchmakro.
+
+### Zielleiste
+- **Aktuelle Position bei jedem Klick:** Für die Suche nach Entfernung lesen die Zielbuttons deine Position außerhalb des Kampfes erst beim Klick oder Hotkey ein. Hast du dich bewegt, startet die Suche oben in der aktualisierten Liste. Bleibst du stehen, prüfen weitere Klicks die nächsten Namen.
+
 ## 1.7.1 – 19.11.2026
 
 ### RareScanner

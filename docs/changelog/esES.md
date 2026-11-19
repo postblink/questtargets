@@ -2,6 +2,14 @@
 
 Cambios para jugadores, empezando por la versión más reciente. Las indicaciones de instalación históricas se aplican a la versión indicada.
 
+## 1.7.2 – 19.11.2026
+
+### RareScanner
+- **Primero los raros más cercanos:** El botón morado ordena los raros marcados y los de la zona por distancia a su punto de aparición conocido más cercano en RareScanner.
+
+### Barra de objetivos
+- **Posición actual con cada clic:** Fuera de combate, los botones de objetivos solo leen tu posición para las búsquedas por distancia al hacer clic o pulsar su atajo. Si te has movido, la búsqueda empieza al principio de la lista actualizada. Si te quedas en el sitio, los siguientes clics comprueban más nombres.
+
 ## 1.7.1 – 19.11.2026
 
 ### RareScanner

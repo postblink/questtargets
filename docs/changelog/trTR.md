@@ -2,6 +2,14 @@
 
 Oyuncuları ilgilendiren değişiklikler en yeni sürümden başlayarak sıralanır. Eski kurulum notları yalnızca belirtilen sürüm için geçerlidir.
 
+## 1.7.2 – 19.11.2026
+
+### RareScanner
+- **En yakın nadirler önce:** Mor düğme, işaretli nadirleri ve bölge listesini RareScanner’daki en yakın bilinen ortaya çıkma noktasının uzaklığına göre sıralar.
+
+### Hedef çubuğu
+- **Her tıklamada güncel konum:** Savaş dışında hedef düğmeleri, mesafeye göre arama yapmak için konumunu yalnızca tıkladığında veya kısayola bastığında okur. Hareket ettiysen arama güncellenen listenin başından başlar. Yerinde durursan sonraki tıklamalar sıradaki isimleri arar.
+
 ## 1.7.1 – 19.11.2026
 
 ### RareScanner

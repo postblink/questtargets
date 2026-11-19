@@ -123,6 +123,16 @@ end
 local function appendNativeFallback(macro, base, settings)
     if not macro or not macro:find("/cleartarget", 1, true)
         or not base or not base.nameList or #base.nameList == 0 then return macro end
+    local proximity = NS.Proximity
+    if proximity then
+        proximity.Order(base)
+        if proximity.MovedFrom(Integration.nativePosition)
+            or (Integration.nativeProximityKey and Integration.nativeProximityKey ~= base.proximityKey) then
+            Integration.nativeCursor = 1
+        end
+        Integration.nativePosition = proximity.position
+        Integration.nativeProximityKey = base.proximityKey
+    end
     local marker = Core.MarkerMacro(settings, true)
     -- Native targets can shrink while the active guide step stays unchanged.
     local index = ((Integration.nativeCursor or 1) - 1) % #base.nameList + 1

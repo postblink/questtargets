@@ -220,6 +220,8 @@ function Core.ClickMacro(entry, entries, settings, state, preserveEntry)
     Core.lastCycle = nil
     Core.lastClick = {path = "Keine Mobnamen", combat = InCombatLockdown()}
     if not entry or not entry.name then return end
+    local proximity = NS.Proximity
+    if proximity and not Core.lastClick.combat then proximity.Sample() end
     -- Prefer a concrete visible quest unit on the first click. If no valid
     -- nameplate token exists, fall back to name search for distant targets.
     local validCurrent = Core.ValidCurrentTarget(entry)
@@ -250,11 +252,15 @@ function Core.ClickMacro(entry, entries, settings, state, preserveEntry)
         return Core.MarkerMacro(settings, true, friendlyCurrent)
     end
     if not validCurrent and not unit then
-        if NS.Proximity then
-            NS.Proximity.Order(entry)
-            if state and state.proximityKey ~= entry.proximityKey then
-                state.fallbackIndex, state.fallbackFinisherIndex = nil, nil
+        if proximity then
+            proximity.Order(entry)
+            if state then
+                if state.proximityKey ~= entry.proximityKey
+                    or proximity.MovedFrom(state.fallbackPosition) then
+                    state.fallbackIndex, state.fallbackFinisherIndex = nil, nil
+                end
                 state.proximityKey = entry.proximityKey
+                state.fallbackPosition = proximity.position
             end
         end
         local startIndex = state and state.fallbackIndex

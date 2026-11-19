@@ -64,7 +64,6 @@ function app:Refresh(forceResolution)
         self.zoneDirty = false
     end
     self.resolutionProvider = provider
-    if NS.Proximity then NS.Proximity.Sample() end
     if not (err or allError or pending or allPending) and #allQuests > 0 then
         Scanner.Prune(allQuests or {}, self.learned)
     end
@@ -88,6 +87,7 @@ function app:Refresh(forceResolution)
     self.dirty = false
     UI.Render(self)
     UI.RenderMaster(self)
+    self.renderedProximityRevision = NS.Proximity and NS.Proximity.revision
     UI.SyncFocusBinding(self)
     NS.QuestieTracker.Sync(self)
     NS.EllesmereTracker.Sync(self)
@@ -135,18 +135,19 @@ end
 function app:Poll()
     if not self.db or not UI.frame or InCombatLockdown() then return end
     if self.dirty or self.pendingData then self:Refresh(false); return end
-    local moved = NS.Proximity and NS.Proximity.Sample()
+    local revision = NS.Proximity and NS.Proximity.revision
     if Scanner.Scan(self.allQuests or {}, self.learned) then
         self.entries, self.metadata = Core.BuildEntries(self.quests or {}, self.learned, self.resolutionCache)
         self.allEntries = self.db.watchedOnly and Core.BuildEntries(self.allQuests or {}, self.learned, self.resolutionCache) or self.entries
         UI.Render(self)
         UI.RenderMaster(self)
-    elseif moved then
+    elseif self.renderedProximityRevision ~= revision then
         UI.Render(self)
         UI.RenderMaster(self)
     else
         UI.UpdateStatus(self)
     end
+    self.renderedProximityRevision = revision
     NS.QuestieTracker.Sync(self)
     NS.EllesmereTracker.Sync(self)
     NS.RestedXP.Sync(self)

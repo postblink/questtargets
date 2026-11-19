@@ -1,5 +1,5 @@
 local _, NS = ...
-local P = {revision = 0, movementYards = 10}
+local P = {revision = 0}
 NS.Proximity = P
 
 local function number(value)
@@ -81,6 +81,13 @@ local function world(mapID, position)
     end
 end
 
+function P.MapPoint(mapID, x, y)
+    if not number(mapID) or mapID <= 0 or not number(x) or not number(y)
+        or x < 0 or x > 1 or y < 0 or y > 1 or not CreateVector2D then return end
+    local ok, point = pcall(function() return world(mapID, CreateVector2D(x, y)) end)
+    if ok then return point end
+end
+
 local function playerPosition()
     if not C_Map or type(C_Map.GetBestMapForUnit) ~= "function"
         or type(C_Map.GetPlayerMapPosition) ~= "function" then return end
@@ -90,18 +97,21 @@ local function playerPosition()
     if pos and number(pos.x) and number(pos.y) then return world(mapID, pos) end
 end
 
--- Sample from the existing one-second poll, never from the click handler.
--- Distance calculations are invalidated only after cumulative movement or a map change.
+local function moved(a, b)
+    if not a or not b then return a ~= b end
+    return a.mapID ~= b.mapID or a.continent ~= b.continent or a.x ~= b.x or a.y ~= b.y
+end
+
+function P.MovedFrom(position)
+    return moved(position, P.position)
+end
+
+-- Only search clicks sample the player position.
 function P.Sample()
     local ok, position = pcall(playerPosition)
     if not ok then position = nil end
     local previous = P.position
-    if not position and not previous then return false end
-    if position and previous and position.continent == previous.continent
-        and position.mapID == previous.mapID
-        and (position.x - previous.x)^2 + (position.y - previous.y)^2 < P.movementYards^2 then
-        return false
-    end
+    if not moved(previous, position) then return false end
     if position and (not previous or position.mapID ~= previous.mapID
         or position.continent ~= previous.continent) then
         -- Retry unavailable map projections when the client enters a new map.
@@ -162,10 +172,25 @@ function P.Distance(name)
     return best
 end
 
+local function distanceToPoints(points)
+    local pos = P.position
+    if not pos or not points then return end
+    local best
+    for _, point in ipairs(points) do
+        if point.continent == pos.continent then
+            local distance = (point.x - pos.x)^2 + (point.y - pos.y)^2
+            if not best or distance < best then best = distance end
+        end
+    end
+    return best
+end
+
 function P.Order(entry)
     if not entry or not entry.nameList or entry.proximityRevision == P.revision then return end
     local distances = {}
-    for _, name in ipairs(entry.nameList) do distances[name] = P.Distance(name) or math.huge end
+    for _, name in ipairs(entry.nameList) do
+        distances[name] = distanceToPoints(entry.mapPoints and entry.mapPoints[name]) or P.Distance(name) or math.huge
+    end
     table.sort(entry.nameList, function(a, b)
         local af = entry.finisherNames and entry.finisherNames[a] == true or false
         local bf = entry.finisherNames and entry.finisherNames[b] == true or false

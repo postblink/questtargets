@@ -22,11 +22,11 @@ class ItemTreeTests(unittest.TestCase):
                     row(11,'Distant wolf','Local zone'),row(10,'Close wolf','Local zone')}}}}
             NS.ItemTree.Import(NS.app)
             local target=NS.ItemTree.target
+            target.scripts.PreClick(target,'LeftButton',false)
             assert(table.concat(target.entry.nameList,'|')=='Waldwolf|Junger Waldwolf|AAA outside zone')
             assert(NS.Proximity.Distance('Waldwolf') < NS.Proximity.Distance('Junger Waldwolf'))
             px=0.7
-            NS.Proximity.Sample()
-            NS.ItemTree.Sync(NS.app)
+            target.scripts.PreClick(target,'LeftButton',false)
             assert(target.entry.nameList[1]=='Junger Waldwolf')
         ''')
 

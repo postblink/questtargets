@@ -83,3 +83,21 @@ Before replacing the macro on a bar click, RareScanner uses
 `Core.ValidCurrentTarget` to check that the current target is a living NPC
 in the active list. A valid target suppresses that click's macro and leaves
 the page cursor in place. XERJ located the shared target check in `Core.lua`.
+
+The button reads spawn markers through the installed RareScanner
+`RSExplorerRareList:OnElementSelectionChanged` on a local drawing surface.
+It also reads active overlay coordinates from `RSOverlayMixin:OnAcquired`
+and uses the last sighting when no spawn point is available. None of these
+paths opens RareScanner UI or changes its filters or marks. Map points are
+projected to world coordinates and ranked by the closest point per name.
+Unprojectable points (including synthetic dungeon maps) use the existing
+QuestieDB distance or alphabetical fallback. XERJ did not locate the current
+ordering code, so the reference is `QuestTargets/Proximity.lua` and the
+installed `Core/Plugins/ExplorerPlugin/RSExplorerMixin.lua`.
+
+Only out-of-combat search clicks and bindings read the player position. After any
+movement, the next macro starts at the top of the list even if the ranking
+hasn't changed. Stationary clicks continue with the next macro page. Both
+the RareScanner button and the shared click path use the position sampler.
+XERJ located the shared click path in `QuestTargets/Core.lua` and the
+distance sorting in `QuestTargets/Proximity.lua`.

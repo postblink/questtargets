@@ -2,6 +2,14 @@
 
 Changements pour les joueurs, de la version la plus récente à la plus ancienne. Les indications d’installation historiques s’appliquent à la version indiquée.
 
+## 1.7.2 – 19.11.2026
+
+### RareScanner
+- **Rares les plus proches en premier :** Le bouton violet trie les rares marqués et ceux de la zone selon la distance à leur point d’apparition connu le plus proche dans RareScanner.
+
+### Barre de ciblage
+- **Position actuelle à chaque clic :** Hors combat, les boutons de ciblage relèvent ta position pour les recherches par distance uniquement lors d’un clic ou de l’utilisation d’un raccourci. Si tu as bougé, la recherche reprend au début de la liste actualisée. Si tu restes sur place, les clics suivants vérifient les noms suivants.
+
 ## 1.7.1 – 19.11.2026
 
 ### RareScanner

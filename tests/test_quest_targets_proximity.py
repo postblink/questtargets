@@ -88,7 +88,7 @@ class ProximityTests(unittest.TestCase):
             assert(p.Distance('Waldwolf')==100) -- nearest of both spawn points, squared yards
             assert(p.Distance('Alter Waldwolf')==nil) -- different continent
             local rev=p.revision
-            px=0.505; assert(not p.Sample()); assert(p.revision==rev)
+            assert(not p.Sample()); assert(p.revision==rev)
             px=0.7; assert(p.Sample()); p.Order(e)
             assert(e.nameList[1]=='Junger Waldwolf')
             for i=1,20 do p.Order(e); p.Register(LibQuestieDB,10,'Waldwolf') end
@@ -114,6 +114,26 @@ class ProximityTests(unittest.TestCase):
                 for _,name in ipairs(e.nameList) do if macro:find(name..'\\n',1,true) then seen[name]=true end end
             end
             for _,name in ipairs(e.nameList) do assert(seen[name],name) end
+        ''')
+
+    def test_click_restarts_name_search_after_small_move_without_waiting_for_poll(self):
+        self.spatial()
+        self.lua.execute('''
+            local p, core = NS.Proximity, NS.Core
+            p.Register(LibQuestieDB,10,'Waldwolf')
+            local entry={name='Waldwolf',refs={},names={Waldwolf=true},nameList={'Waldwolf'},mobCount=8}
+            for i=1,7 do
+                local name='Unbekanntes Questziel '..i
+                entry.names[name]=true
+                entry.nameList[#entry.nameList+1]=name
+            end
+            local state={}
+            local first=core.ClickMacro(entry,{}, {},state)
+            assert(first:find('Waldwolf',1,true), 'the closest target should be on the first page')
+            assert(core.ClickMacro(entry,{}, {},state)~=first, 'stationary clicks should advance the page')
+            px=.505
+            assert(core.ClickMacro(entry,{}, {},state)==first, 'movement should restart the first page')
+            assert(p.position.x==505, 'the click should read the current position')
         ''')
 
     def test_visible_target_beats_spawn_estimate_and_mob_beats_finisher(self):
@@ -185,16 +205,34 @@ class ProximityTests(unittest.TestCase):
             assert(conversions==3 and reads==2) -- no new projection or database reads
         ''')
 
-    def test_resolver_registers_mobs_and_finishers_and_poll_updates_ranking(self):
+    def test_only_targeting_clicks_sample_position_for_resolved_targets(self):
         self.spatial()
         self.lua.execute('''
             assert(NS.Database.Provider()==LibQuestieDB)
             quests[3]={questID=3,title='Abgabe',complete=true,objectives={}}
             records.Quest[3]={name='Abgabe',finishedBy={{12}}}
+            local positionReads=0
+            local getPosition=C_Map.GetPlayerMapPosition
+            C_Map.GetPlayerMapPosition=function(...)
+                positionReads=positionReads+1
+                return getPosition(...)
+            end
             boot()
+            tick()
+            NS.app:Refresh(false)
+            assert(positionReads==0, 'startup, refresh and polling should not read player coordinates')
+            local entry={name='Waldwolf',refs={},names={Waldwolf=true},nameList={'Waldwolf'},mobCount=1}
+            NS.Core.ClickMacro(entry,{}, {},{})
             assert(NS.Proximity.Distance('Waldwolf')==100)
+            tick()
             local e=NS.UI.master.entry
             assert(e.nameList[1]=='Waldwolf')
-            px=0.7; tick()
+            px=0.7
+            tick()
+            assert(positionReads==1 and NS.UI.master.entry.nameList[1]=='Waldwolf',
+                'movement without a click should not change the ranking')
+            NS.Core.ClickMacro(entry,{}, {},{})
+            tick()
+            assert(positionReads==2, 'each targeting click should read player coordinates once')
             assert(NS.UI.master.entry.nameList[1]=='Junger Waldwolf')
         ''')

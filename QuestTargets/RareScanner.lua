@@ -9,6 +9,74 @@ local PULSE_DURATION, PULSE_ALPHA = 0.42, 0.62
 local markHooked = false
 local observedMarks = {}
 local zoneCache
+local spawnCache, spawnCacheExpires = {}, 0
+
+local function ignoreMenuItem() end
+
+local function spawnPoints(npcID, mapID)
+    if type(mapID) ~= "number" or mapID <= 0 or mapID >= 100000
+        or not C_Map or not C_Map.GetMapArtID or not RSExplorerRareList
+        or type(RSExplorerRareList.OnElementSelectionChanged) ~= "function" then return end
+    local now = GetTime()
+    if now >= spawnCacheExpires then spawnCache, spawnCacheExpires = {}, now + 60 end
+    local pointsByNpc = spawnCache[mapID]
+    if not pointsByNpc then pointsByNpc = {}; spawnCache[mapID] = pointsByNpc end
+    if pointsByNpc[npcID] then return pointsByNpc[npcID] end
+
+    local points = {}
+    pointsByNpc[npcID] = points
+    -- The Explorer draws every known spawn in its detail map. Use a local
+    -- drawing surface of size 1 so its icon offsets are normalized map coordinates.
+    local function unitSize() return 1 end
+    local map = {mapID=mapID, GetWidth=unitSize, GetHeight=unitSize}
+    local iconTexture = {
+        SetTexture=ignoreMenuItem, SetVertexColor=ignoreMenuItem, SetDrawLayer=ignoreMenuItem,
+    }
+    local icon = {
+        Texture=iconTexture, Show=ignoreMenuItem, GetParent=function() return map end,
+        SetPoint=function(_, _, _, _, x, y)
+            if type(x) ~= "number" or type(y) ~= "number" or (x == 0 and y == 0) then return end
+            local point = NS.Proximity.MapPoint(map.mapID, x, -y)
+            if point then points[#points+1] = point end
+        end,
+    }
+    local pool = {ReleaseAll=ignoreMenuItem, Acquire=function() return icon end}
+    map.overlayIconsPool, map.iconsPool = pool, pool
+    local detail = {SetAllPoints=ignoreMenuItem, SetMapAndLayer=ignoreMenuItem, Show=ignoreMenuItem}
+    map.detailLayerPool = {ReleaseAll=ignoreMenuItem, Acquire=function() return detail end}
+    local info = {Map=map, Name={SetText=ignoreMenuItem}, Custom={},
+        AchievementIcon={Show=ignoreMenuItem, Hide=ignoreMenuItem}}
+    local host = {RareInfo=info, RareLoot={Refresh=ignoreMenuItem}, lootItemsPool=pool}
+    local row = {Selected={Show=ignoreMenuItem}}
+    local explorer = {mapID=mapID, GetParent=function() return host end, AddItems=ignoreMenuItem,
+        scrollView={FindFrame=function() return row end}}
+    pcall(function()
+        map.mapArtID = C_Map.GetMapArtID(mapID)
+        RSExplorerRareList.OnElementSelectionChanged(explorer, {isNpc=true, entityID=npcID, name=""}, true)
+    end)
+    return points
+end
+
+local function addPoint(entry, name, point)
+    if not point then return end
+    local list = entry.mapPoints[name]
+    if not list then list = {}; entry.mapPoints[name] = list end
+    list[#list+1] = point
+end
+
+local function addSpawnPoints(entry, name, id, mapID)
+    for _, point in ipairs(spawnPoints(id, mapID) or {}) do addPoint(entry, name, point) end
+end
+
+local function sightingPoint(found)
+    if type(found) ~= "table" then return end
+    local x, y = tonumber(found.coordX), tonumber(found.coordY)
+    if not x or not y or (x == 0 and y == 0) then return end
+    if x > 1 then x = x / 10000 end
+    if y > 1 then y = y / 10000 end
+    if type(found.mapID) ~= "number" or found.mapID >= 100000 then return end
+    return NS.Proximity.MapPoint(found.mapID, x, y)
+end
 
 local function isForever()
     local interface = GetBuildInfo and select(4, GetBuildInfo())
@@ -33,7 +101,7 @@ function Integration.ZoneAvailable()
         and DropdownButtonMixin and type(DropdownButtonMixin.SetupMenu) == "function"
 end
 
-local function observeMark(_, _, _, _, _, _, source, groupPin)
+local function observeMark(_, x, y, _, _, _, source, groupPin)
     local poi = source and (groupPin and source or source.POI)
     local db = scannerDB()
     local overlays = db and db.char and db.char.overlayActive
@@ -42,11 +110,16 @@ local function observeMark(_, _, _, _, _, _, source, groupPin)
     if not record then return end
     local mark = observedMarks[id]
     if not mark or mark.record ~= record then
-        mark = {record = record}
+        mark = {record = record, points = {}}
         observedMarks[id] = mark
     end
     mark.npc = poi.isNpc == true
     mark.name = mark.npc and (NS.Core.SafeName(poi.name) or mark.name) or nil
+    if mark.npc and type(poi.mapID) == "number" and poi.mapID < 100000 then
+        mark.mapID = poi.mapID
+        local point = (x ~= 0 or y ~= 0) and NS.Proximity.MapPoint(poi.mapID, x, y)
+        if point then mark.points[point.mapID .. ":" .. point.x .. ":" .. point.y] = point end
+    end
 end
 
 local function observeOverlays()
@@ -63,13 +136,15 @@ local function markedEntry(app)
     local locale = GetLocale()
     local saved = app.db.rareScannerMarks
     if type(saved) ~= "table" or saved.locale ~= locale or type(saved.names) ~= "table" then
-        saved = {locale=locale, names={}}
+        saved = {locale=locale, names={}, maps={}}
         app.db.rareScannerMarks = saved
     end
+    if type(saved.maps) ~= "table" then saved.maps = {} end
     local cachedNames = global.rare_names and global.rare_names[locale]
-    local entry = {nameList = {}, names = {}}
+    local entry = {nameList = {}, names = {}, mapPoints = {}}
+    local mapID = C_Map and C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit("player")
     for id in pairs(saved.names) do
-        if not overlays or not overlays[id] then saved.names[id] = nil end
+        if not overlays or not overlays[id] then saved.names[id], saved.maps[id] = nil, nil end
     end
     for id, mark in pairs(observedMarks) do
         if not overlays or overlays[id] ~= mark.record then observedMarks[id] = nil end
@@ -79,14 +154,23 @@ local function markedEntry(app)
             local seen = observedMarks[id]
             if seen then
                 saved.names[id] = seen.npc and (seen.name or saved.names[id] or true) or nil
+                saved.maps[id] = seen.npc and (seen.mapID or saved.maps[id]) or nil
             end
-            local knownRare = saved.names[id] or (global.rares_found and global.rares_found[id])
+            local found = global.rares_found and global.rares_found[id]
+            local knownRare = saved.names[id] or found
             if knownRare and (not seen or seen.npc) then
                 local candidate = NS.Core.SafeName(cachedNames and cachedNames[id])
                     or NS.Core.SafeName(saved.names[id])
-                if candidate and not entry.names[candidate] then
-                    entry.names[candidate] = true
-                    entry.nameList[#entry.nameList + 1] = candidate
+                if candidate then
+                    if not entry.names[candidate] then
+                        entry.names[candidate] = true
+                        entry.nameList[#entry.nameList + 1] = candidate
+                    end
+                    local knownMap = saved.maps[id] or (type(found) == "table" and found.mapID)
+                    for _, point in pairs(seen and seen.points or {}) do addPoint(entry, candidate, point) end
+                    addSpawnPoints(entry, candidate, id, mapID)
+                    if knownMap ~= mapID then addSpawnPoints(entry, candidate, id, knownMap) end
+                    if not entry.mapPoints[candidate] then addPoint(entry, candidate, sightingPoint(found)) end
                 end
             end
         end
@@ -120,7 +204,6 @@ local dungeonMaps = {
     [3039] = {100028}, -- Krol'dok Stronghold
 }
 
-local function ignoreMenuItem() end
 local ignoredMenu = {
     SetEnabled = ignoreMenuItem, SetResponder = ignoreMenuItem, SetScrollMode = ignoreMenuItem,
     CreateTitle = ignoreMenuItem, CreateDivider = ignoreMenuItem, SetTag = ignoreMenuItem,
@@ -140,10 +223,16 @@ local function readZoneRares(mapID, entry)
     local filter = setmetatable({}, {__index = ignoredMenu})
     function filter:CreateCheckbox(text)
         local label = text:gsub("|T.-|t", ""):gsub("|A.-|a", "")
-        local name = NS.Core.SafeName(label:match("^%s*(.-)%s+%(%d+%)$"))
-        if name and not entry.names[name] then
-            entry.names[name] = true
-            entry.nameList[#entry.nameList + 1] = name
+        local rawName, id = label:match("^%s*(.-)%s+%((%d+)%)$")
+        local name = NS.Core.SafeName(rawName)
+        if name then
+            id = tonumber(id)
+            if not entry.names[name] then
+                entry.names[name] = true
+                entry.nameList[#entry.nameList + 1] = name
+            end
+            addSpawnPoints(entry, name, id, mapID)
+            if not entry.mapPoints[name] then addPoint(entry, name, sightingPoint(entry.sightings[id])) end
         end
         return ignoredMenu
     end
@@ -157,7 +246,10 @@ local function readZoneRares(mapID, entry)
 end
 
 local function collectZoneRares(mapID, instanceID)
-    local entry = {nameList = {}, names = {}, scope = instanceID and ("dungeon:" .. instanceID) or mapID}
+    local db = scannerDB()
+    local sightings = db and db.global and db.global.rares_found
+    local entry = {nameList = {}, names = {}, mapPoints = {}, sightings = sightings or {},
+        scope = instanceID and ("dungeon:" .. instanceID) or mapID}
     local seen = {}
     local function read(id)
         if not id or seen[id] then return end
@@ -216,13 +308,20 @@ local function prepareMarkMacro(target, entry, clicked)
     if clicked and entry and NS.Core.ValidCurrentTarget(entry, true) then
         macro = nil
     elseif entry and #entry.nameList > 1 then
-        NS.Proximity.Order(entry)
-        if target.markKey ~= entry.proximityKey or target.markScope ~= entry.scope then target.markIndex = nil end
+        local proximity = NS.Proximity
+        proximity.Order(entry)
+        if target.markKey ~= entry.proximityKey or target.markScope ~= entry.scope
+            or (target.markIndex and proximity.MovedFrom(target.markPosition)) then
+            target.markIndex = nil
+        end
         target.markKey, target.markScope = entry.proximityKey, entry.scope
         macro, nextIndex = NS.Core.EntryMacro(entry, rareSearchOptions, target.markIndex)
-        if clicked then target.markIndex = nextIndex end
+        if clicked then
+            if not target.markIndex then target.markPosition = proximity.position end
+            target.markIndex = nextIndex
+        end
     else
-        target.markKey, target.markScope, target.markIndex = nil, nil, nil
+        target.markKey, target.markScope, target.markIndex, target.markPosition = nil, nil, nil, nil
         macro = entry and "/targetexact " .. entry.name or nil
     end
     if target:GetAttribute("macrotext1") ~= macro then target:SetAttribute("macrotext1", macro) end
@@ -252,6 +351,7 @@ local function createMarkButton(app)
     NS.UI.StyleTargetButton(target, 0.77, 0.52, 1)
     target:SetScript("PreClick", function(self, mouseButton, down)
         if mouseButton == "LeftButton" and not down and not InCombatLockdown() then
+            NS.Proximity.Sample()
             prepareMarkMacro(self, app.db.rareScannerButton ~= false and searchEntry(app) or nil, true)
         end
     end)

@@ -3,6 +3,90 @@ import test_quest_targets as addon
 
 
 class RareScannerTests(unittest.TestCase):
+    def test_search_prioritizes_rarescanner_spawns_and_reorders_after_movement(self):
+        addon.QuestTargetsTests.setUp(self)
+        self.lua.execute('''
+            GetBuildInfo=function() return '1.60.1','','',16001 end
+            GetTime=function() return 0 end
+            RegisterStateDriver=function() end
+            RSOverlayMixin={OnAcquired=function() end}
+            local names={[1]='A Far Rare',[2]='Z Near Rare',[3]='B Unknown Rare',[4]='Y Sighting'}
+            local rs={db={char={overlayActive={}},global={rare_names={deDE=names},rares_found={
+                [4]={coordX='2000',coordY='5000',mapID=20},
+            }}}}
+            local originalLibStub=LibStub
+            LibStub=function(name,silent)
+                if name=='AceAddon-3.0' then return {GetAddon=function() return rs end} end
+                return originalLibStub(name,silent)
+            end
+            local playerX=.1
+            CreateVector2D=function(x,y) return {x=x,y=y} end
+            C_Map={
+                GetBestMapForUnit=function() return 20 end,
+                GetMapArtID=function() return 42 end,
+                GetPlayerMapPosition=function() return CreateVector2D(playerX,.5) end,
+                GetWorldPosFromMapPos=function(_,pos) return 1,CreateVector2D(pos.x*1000,pos.y*500) end,
+            }
+            DropdownButtonMixin={SetupMenu=function(self,generator) self.menuGenerator=generator end}
+            RSWorldMapButtonMixin={SetupMenu=function(self)
+                DropdownButtonMixin.SetupMenu(self,function(_,root)
+                    local filter=root:CreateButton('NPCs'):CreateButton('Filter NPCs')
+                    for id,name in pairs(names) do filter:CreateCheckbox(name..' ('..id..')') end
+                end)
+            end}
+            local reads=0
+            RSExplorerRareList={OnElementSelectionChanged=function(self,data,selected)
+                assert(selected and self.mapID==20 and data.isNpc)
+                local map=self:GetParent().RareInfo.Map
+                assert(map.mapArtID==42 and map:GetWidth()==1)
+                reads=reads+1
+                if data.entityID==1 then map.iconsPool:Acquire():SetPoint('CENTER',map,'TOPLEFT',.8,-.5)
+                elseif data.entityID==2 then
+                    map.iconsPool:Acquire():SetPoint('CENTER',map,'TOPLEFT',.6,-.5)
+                    map.overlayIconsPool:Acquire():SetPoint('CENTER',map,'TOPLEFT',.12,-.5)
+                end
+            end}
+            QuestTargetsDB={rareScannerZone=true}
+            boot()
+            local button=NS.RareScanner.markButton
+            assert(reads==4 and NS.Proximity.position==nil)
+            button.scripts.PreClick(button,'LeftButton',false)
+            assert(reads==4 and table.concat(button.markedNames,'|')==
+                'Z Near Rare|Y Sighting|A Far Rare|B Unknown Rare')
+            local macro=button:GetAttribute('macrotext1')
+            assert(macro:find('Z Near Rare',1,true)<macro:find('A Far Rare',1,true))
+            button.scripts.PreClick(button,'LeftButton',false)
+            assert(button:GetAttribute('macrotext1'):find('/targetexact [noexists] B Unknown Rare',1,true)
+                < button:GetAttribute('macrotext1'):find('/targetexact [noexists] Z Near Rare',1,true))
+            playerX=.105
+            button.scripts.PreClick(button,'LeftButton',false)
+            assert(not button:GetAttribute('macrotext1'):find('B Unknown Rare',1,true),
+                'movement must restart the first page even when the same rare remains closest')
+            playerX=.79
+            button.scripts.PreClick(button,'LeftButton',false)
+            assert(reads==4 and button.markedNames[1]=='A Far Rare')
+            playerX=.696
+            button.scripts.PreClick(button,'LeftButton',false)
+            assert(button.markedNames[1]=='Z Near Rare')
+            playerX=.704
+            button.scripts.PreClick(button,'LeftButton',false)
+            assert(button.markedNames[1]=='A Far Rare', 'a click must refresh the ranking after a short move')
+            playerX=.79
+            NS.app.db.rareScannerZone=false
+            local function mark(id,x)
+                rs.db.char.overlayActive[id]={}
+                local poi={entityID=id,name=names[id],isNpc=true,mapID=20}
+                RSOverlayMixin:OnAcquired(x,.5,0,0,0,{POI=poi})
+            end
+            mark(1,.8)
+            mark(3,.79)
+            tick()
+            assert(button.markedNames[1]=='B Unknown Rare' and button.markedNames[2]=='A Far Rare')
+            playerX=.1
+            tick()
+            assert(button.markedNames[1]=='B Unknown Rare')
+        ''')
+
     def test_opt_in_zone_search_uses_current_map_and_pages_all_zone_rares(self):
         addon.QuestTargetsTests.setUp(self)
         self.lua.execute('''

@@ -2,6 +2,14 @@
 local _, NS = ...
 NS.PatchNotesData = {
     deDE = {
+        { version = "1.7.2", date = "19.11.2026", sections = {
+                { title = "RareScanner", items = {
+                    "**Nächste Rares zuerst:** Der violette Button sortiert markierte Rares und die Gebietsliste nach der Entfernung zum nächsten bekannten RareScanner-Spawnpunkt. So landen nahe Rares früher im Suchmakro.",
+                }},
+                { title = "Zielleiste", items = {
+                    "**Aktuelle Position bei jedem Klick:** Für die Suche nach Entfernung lesen die Zielbuttons deine Position außerhalb des Kampfes erst beim Klick oder Hotkey ein. Hast du dich bewegt, startet die Suche oben in der aktualisierten Liste. Bleibst du stehen, prüfen weitere Klicks die nächsten Namen.",
+                }},
+            }},
         { version = "1.7.1", date = "19.11.2026", sections = {
                 { title = "RareScanner", items = {
                     "**Ziel behalten:** Ein lebender Rare aus der Suchliste bleibt ausgewählt, wenn du den violetten Button erneut anklickst oder seinen Hotkey drückst.",
@@ -217,6 +225,14 @@ NS.PatchNotesData = {
             }},
     },
     enUS = {
+        { version = "1.7.2", date = "Nov 19, 2026", sections = {
+                { title = "RareScanner", items = {
+                    "**Nearest rares first:** The purple button orders marked rares and the zone list by distance to the nearest known RareScanner spawn point, so nearby rares are checked sooner.",
+                }},
+                { title = "Targeting bar", items = {
+                    "**Current position on every click:** Out of combat, targeting buttons read your position for distance-based searches only when you click or press a hotkey. If you've moved, the search starts at the top of the updated list. If you stay in place, further clicks check the next names.",
+                }},
+            }},
         { version = "1.7.1", date = "Nov 19, 2026", sections = {
                 { title = "RareScanner", items = {
                     "**Keep your target:** A living rare on the search list stays selected when you click the purple button again or press its hotkey.",
@@ -432,6 +448,14 @@ NS.PatchNotesData = {
             }},
     },
     esES = {
+        { version = "1.7.2", date = "19.11.2026", sections = {
+                { title = "RareScanner", items = {
+                    "**Primero los raros más cercanos:** El botón morado ordena los raros marcados y los de la zona por distancia a su punto de aparición conocido más cercano en RareScanner.",
+                }},
+                { title = "Barra de objetivos", items = {
+                    "**Posición actual con cada clic:** Fuera de combate, los botones de objetivos solo leen tu posición para las búsquedas por distancia al hacer clic o pulsar su atajo. Si te has movido, la búsqueda empieza al principio de la lista actualizada. Si te quedas en el sitio, los siguientes clics comprueban más nombres.",
+                }},
+            }},
         { version = "1.7.1", date = "19.11.2026", sections = {
                 { title = "RareScanner", items = {
                     "**Conservar el objetivo:** Un raro vivo de la lista sigue seleccionado si vuelves a pulsar el botón morado o su tecla rápida.",
@@ -647,6 +671,14 @@ NS.PatchNotesData = {
             }},
     },
     frFR = {
+        { version = "1.7.2", date = "19.11.2026", sections = {
+                { title = "RareScanner", items = {
+                    "**Rares les plus proches en premier :** Le bouton violet trie les rares marqués et ceux de la zone selon la distance à leur point d’apparition connu le plus proche dans RareScanner.",
+                }},
+                { title = "Barre de ciblage", items = {
+                    "**Position actuelle à chaque clic :** Hors combat, les boutons de ciblage relèvent ta position pour les recherches par distance uniquement lors d’un clic ou de l’utilisation d’un raccourci. Si tu as bougé, la recherche reprend au début de la liste actualisée. Si tu restes sur place, les clics suivants vérifient les noms suivants.",
+                }},
+            }},
         { version = "1.7.1", date = "19.11.2026", sections = {
                 { title = "RareScanner", items = {
                     "**Conserver la cible :** Un rare vivant de la liste reste ciblé lorsque tu cliques de nouveau sur le bouton violet ou utilises son raccourci.",
@@ -862,6 +894,14 @@ NS.PatchNotesData = {
             }},
     },
     trTR = {
+        { version = "1.7.2", date = "19.11.2026", sections = {
+                { title = "RareScanner", items = {
+                    "**En yakın nadirler önce:** Mor düğme, işaretli nadirleri ve bölge listesini RareScanner’daki en yakın bilinen ortaya çıkma noktasının uzaklığına göre sıralar.",
+                }},
+                { title = "Hedef çubuğu", items = {
+                    "**Her tıklamada güncel konum:** Savaş dışında hedef düğmeleri, mesafeye göre arama yapmak için konumunu yalnızca tıkladığında veya kısayola bastığında okur. Hareket ettiysen arama güncellenen listenin başından başlar. Yerinde durursan sonraki tıklamalar sıradaki isimleri arar.",
+                }},
+            }},
         { version = "1.7.1", date = "19.11.2026", sections = {
                 { title = "RareScanner", items = {
                     "**Hedefi koru:** Mor düğmeye yeniden tıkladığında veya kısayoluna bastığında arama listesindeki canlı nadir yaratık hedefte kalır.",
@@ -1077,6 +1117,14 @@ NS.PatchNotesData = {
             }},
     },
     zhCN = {
+        { version = "1.7.2", date = "2026年11月19日", sections = {
+                { title = "RareScanner", items = {
+                    "**优先搜索附近的稀有怪：** 紫色按钮会按 RareScanner 已知的最近刷新点距离，对已标记稀有怪和当前区域列表排序。",
+                }},
+                { title = "目标按钮栏", items = {
+                    "**每次点击都读取当前位置：** 在战斗之外，只有点击目标按钮或按下快捷键时，才会读取你的位置并按距离搜索。如果你移动过，搜索会从更新后的列表开头开始。留在原地时，再次点击会继续搜索后续的名字。",
+                }},
+            }},
         { version = "1.7.1", date = "2026年11月19日", sections = {
                 { title = "RareScanner", items = {
                     "**保留目标：** 再次点击紫色按钮或按下其快捷键时，已选中的存活稀有怪只要仍在搜索列表中，就会保持选中。",

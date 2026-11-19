@@ -2,6 +2,14 @@
 
 Player-facing changes, newest version first. Historical installation notes apply to the version listed.
 
+## 1.7.2 – Nov 19, 2026
+
+### RareScanner
+- **Nearest rares first:** The purple button orders marked rares and the zone list by distance to the nearest known RareScanner spawn point, so nearby rares are checked sooner.
+
+### Targeting bar
+- **Current position on every click:** Out of combat, targeting buttons read your position for distance-based searches only when you click or press a hotkey. If you've moved, the search starts at the top of the updated list. If you stay in place, further clicks check the next names.
+
 ## 1.7.1 – Nov 19, 2026
 
 ### RareScanner
