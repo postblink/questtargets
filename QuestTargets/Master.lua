@@ -183,7 +183,7 @@ function UI.RenderMaster(app)
             end
             if mouseButton ~= "LeftButton" or down or InCombatLockdown() then return end
             if NS.RestedXP.PreClick(app, self) then return end
-            Core.SetClickMacro(self, Core.ClickMacro(self.entry, app.allEntries or {}, app.db, self), app.db)
+            Core.SetClickMacro(self, Core.ClickMacro(self.entry, {}, app.db, self), app.db)
         end)
         frame:SetScript("PostClick", function(self, _, down)
             if down then return end

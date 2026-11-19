@@ -2,6 +2,14 @@
 local _, NS = ...
 NS.PatchNotesData = {
     deDE = {
+        { version = "1.7.1", date = "19.11.2026", sections = {
+                { title = "RareScanner", items = {
+                    "**Ziel behalten:** Ein lebender Rare aus der Suchliste bleibt ausgewählt, wenn du den violetten Button erneut anklickst oder seinen Hotkey drückst.",
+                }},
+                { title = "Zielleiste", items = {
+                    "**Getrennte Zielsuche:** Der rote Hauptbutton sucht Questziele und bei aktiver RestedXP-Integration auch Ziele des aktuellen Guide-Schritts. Der blaue RestedXP-, gelbe ItemTree- und violette RareScanner-Button suchen jeweils in ihrer eigenen Liste.",
+                }},
+            }},
         { version = "1.7.0", date = "19.11.2026", sections = {
                 { title = "RareScanner", items = {
                     "**WoW Forever:** Die Zielsuche benötigt das Addon RareScanner. Sie funktioniert außerhalb des Kampfes und innerhalb von WoWs Zielreichweite.",
@@ -209,6 +217,14 @@ NS.PatchNotesData = {
             }},
     },
     enUS = {
+        { version = "1.7.1", date = "Nov 19, 2026", sections = {
+                { title = "RareScanner", items = {
+                    "**Keep your target:** A living rare on the search list stays selected when you click the purple button again or press its hotkey.",
+                }},
+                { title = "Targeting bar", items = {
+                    "**Separate target searches:** The red master button looks for quest targets and adds targets from the active RestedXP guide step when enabled. The blue RestedXP, yellow ItemTree and purple RareScanner buttons each search their own list.",
+                }},
+            }},
         { version = "1.7.0", date = "Nov 19, 2026", sections = {
                 { title = "RareScanner", items = {
                     "**WoW Forever:** Targeting requires the RareScanner addon. It works out of combat and within WoW’s targeting range.",
@@ -416,6 +432,14 @@ NS.PatchNotesData = {
             }},
     },
     esES = {
+        { version = "1.7.1", date = "19.11.2026", sections = {
+                { title = "RareScanner", items = {
+                    "**Conservar el objetivo:** Un raro vivo de la lista sigue seleccionado si vuelves a pulsar el botón morado o su tecla rápida.",
+                }},
+                { title = "Barra de objetivos", items = {
+                    "**Búsquedas independientes:** El botón principal rojo busca objetivos de misión y, si RestedXP está activado en Quest Targets, también los del paso actual de la guía. Los botones azul de RestedXP, amarillo de ItemTree y morado de RareScanner buscan en sus propias listas.",
+                }},
+            }},
         { version = "1.7.0", date = "19.11.2026", sections = {
                 { title = "RareScanner", items = {
                     "**WoW Forever:** La búsqueda requiere el addon RareScanner. Funciona fuera de combate y dentro del alcance de selección de WoW.",
@@ -623,6 +647,14 @@ NS.PatchNotesData = {
             }},
     },
     frFR = {
+        { version = "1.7.1", date = "19.11.2026", sections = {
+                { title = "RareScanner", items = {
+                    "**Conserver la cible :** Un rare vivant de la liste reste ciblé lorsque tu cliques de nouveau sur le bouton violet ou utilises son raccourci.",
+                }},
+                { title = "Barre de ciblage", items = {
+                    "**Recherches séparées :** Le bouton principal rouge recherche les cibles de quête et, si l’intégration RestedXP est active, celles de l’étape actuelle du guide. Les boutons bleu de RestedXP, jaune d’ItemTree et violet de RareScanner utilisent chacun leur propre liste.",
+                }},
+            }},
         { version = "1.7.0", date = "19.11.2026", sections = {
                 { title = "RareScanner", items = {
                     "**WoW Forever :** Le ciblage nécessite l’addon RareScanner. Il fonctionne hors combat et à portée de ciblage.",
@@ -830,6 +862,14 @@ NS.PatchNotesData = {
             }},
     },
     trTR = {
+        { version = "1.7.1", date = "19.11.2026", sections = {
+                { title = "RareScanner", items = {
+                    "**Hedefi koru:** Mor düğmeye yeniden tıkladığında veya kısayoluna bastığında arama listesindeki canlı nadir yaratık hedefte kalır.",
+                }},
+                { title = "Hedef çubuğu", items = {
+                    "**Ayrı hedef aramaları:** Kırmızı ana düğme görev hedeflerini ve RestedXP entegrasyonu açıksa etkin rehber adımının hedeflerini arar. Mavi RestedXP, sarı ItemTree ve mor RareScanner düğmeleri kendi listelerinde arama yapar.",
+                }},
+            }},
         { version = "1.7.0", date = "19.11.2026", sections = {
                 { title = "RareScanner", items = {
                     "**WoW Forever:** Hedefleme için RareScanner eklentisi gerekir. Arama savaş dışında ve WoW’un hedefleme menzili içinde çalışır.",
@@ -1037,6 +1077,14 @@ NS.PatchNotesData = {
             }},
     },
     zhCN = {
+        { version = "1.7.1", date = "2026年11月19日", sections = {
+                { title = "RareScanner", items = {
+                    "**保留目标：** 再次点击紫色按钮或按下其快捷键时，已选中的存活稀有怪只要仍在搜索列表中，就会保持选中。",
+                }},
+                { title = "目标按钮栏", items = {
+                    "**独立搜索：** 红色主按钮搜索任务目标，启用 RestedXP 集成后也会搜索当前指南步骤的目标。蓝色 RestedXP、黄色 ItemTree 和紫色 RareScanner 按钮各自使用自己的搜索列表。",
+                }},
+            }},
         { version = "1.7.0", date = "2026年11月19日", sections = {
                 { title = "RareScanner", items = {
                     "**WoW Forever：** 搜索功能需要启用 RareScanner 插件。它仅在非战斗状态下可用，并受 WoW 的选定目标距离限制。",

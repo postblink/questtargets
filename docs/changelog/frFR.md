@@ -2,6 +2,14 @@
 
 Changements pour les joueurs, de la version la plus récente à la plus ancienne. Les indications d’installation historiques s’appliquent à la version indiquée.
 
+## 1.7.1 – 19.11.2026
+
+### RareScanner
+- **Conserver la cible :** Un rare vivant de la liste reste ciblé lorsque tu cliques de nouveau sur le bouton violet ou utilises son raccourci.
+
+### Barre de ciblage
+- **Recherches séparées :** Le bouton principal rouge recherche les cibles de quête et, si l’intégration RestedXP est active, celles de l’étape actuelle du guide. Les boutons bleu de RestedXP, jaune d’ItemTree et violet de RareScanner utilisent chacun leur propre liste.
+
 ## 1.7.0 – 19.11.2026
 
 ### RareScanner

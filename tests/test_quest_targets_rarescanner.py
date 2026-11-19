@@ -191,6 +191,13 @@ class RareScannerTests(unittest.TestCase):
             b.scripts.PreClick(b,'LeftButton',false)
             assert(b:IsShown() and b:GetAttribute('type1')=='macro')
             assert(macroHas('Singer') and not macroHas('Other rare'))
+            units.target={name='Singer'}
+            b.scripts.PreClick(b,'LeftButton',false)
+            assert(b.attributes.macrotext1==nil, 'a single-name list must also keep the target')
+            units.target.player=true
+            b.scripts.PreClick(b,'LeftButton',false)
+            assert(macroHas('Singer'), 'a player with the same name must not block the search')
+            units.target=nil
             rs.db.char.overlayActive[11]=nil
             b.scripts.PreClick(b,'LeftButton',false)
             assert(b.attributes.macrotext1==nil)
@@ -202,6 +209,18 @@ class RareScannerTests(unittest.TestCase):
                 mark(i,expected[i],true)
             end
             local attempted={}
+            b.scripts.PreClick(b,'LeftButton',false)
+            local nextPage=b.markIndex
+            units.target={name=expected[1]}
+            b.scripts.PreClick(b,'LeftButton',false)
+            assert(b.attributes.macrotext1==nil and b.markIndex==nextPage, 'a repeat click must keep the selected rare')
+            units.target.friendly=true
+            b.scripts.PreClick(b,'LeftButton',false)
+            assert(b.attributes.macrotext1==nil and b.markIndex==nextPage, 'a listed friendly NPC is also a valid rare')
+            units.target.dead=true
+            b.scripts.PreClick(b,'LeftButton',false)
+            assert(b.attributes.macrotext1 and b.markIndex~=nextPage, 'a dead rare must not block the search')
+            units.target=nil
             for i=1,11 do
                 tick()
                 b.scripts.PreClick(b,'LeftButton',false)

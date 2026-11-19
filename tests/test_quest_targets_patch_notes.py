@@ -84,17 +84,18 @@ class PatchNotesTests(unittest.TestCase):
 
     def test_auto_open_waits_until_out_of_combat(self):
         self.lua.execute('''
-            QuestTargetsNewsDB={seenVersion='1.6.1'}
-            GetAddOnMetadata=function() return '1.7.0' end
+            QuestTargetsNewsDB={seenVersion='1.7.0'}
+            GetAddOnMetadata=function() return '1.7.1' end
             event('ADDON_LOADED','QuestTargets')
             combat=true
             event('PLAYER_LOGIN')
             flush()
-            assert(not QuestTargetsPatchNotes and QuestTargetsNewsDB.seenVersion=='1.6.1')
+            assert(not QuestTargetsPatchNotes and QuestTargetsNewsDB.seenVersion=='1.7.0')
             combat=false
             event('PLAYER_REGEN_ENABLED')
             local panel=QuestTargetsPatchNotes
-            assert(panel and panel:IsShown() and QuestTargetsNewsDB.seenVersion=='1.7.0')
+            assert(panel and panel:IsShown() and QuestTargetsNewsDB.seenVersion=='1.7.1')
+            assert(panel.cards[1].heading:GetText()=='1.7.1')
             assert(panel.scripts.OnUpdate==nil)
             assert(panel:IsShown())
         ''')

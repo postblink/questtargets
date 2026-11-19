@@ -284,7 +284,7 @@ function Core.ClickMacro(entry, entries, settings, state, preserveEntry)
         .. (friendly and "" or Core.MarkerMacro(settings, true))
 end
 
-function Core.ValidCurrentTarget(entry)
+function Core.ValidCurrentTarget(entry, allowFriendly)
     if InCombatLockdown() then return false end
     local exists, dead = UnitExists("target"), UnitIsDeadOrGhost("target")
     local player, hostile = UnitIsPlayer("target"), UnitCanAttack("player", "target")
@@ -295,7 +295,7 @@ function Core.ValidCurrentTarget(entry)
     -- Quest turn-in NPCs are friendly. Only the masterbutton's verified ready
     -- finishers qualify; a friendly NPC with an unrelated mob name does not.
     if entry.finisherNames and entry.finisherNames[name] then return true end
-    if not hostile then return false end
+    if not hostile and not allowFriendly then return false end
     return entry.names and entry.names[name] == true or (not entry.names and entry.name == name)
 end
 

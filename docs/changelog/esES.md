@@ -2,6 +2,14 @@
 
 Cambios para jugadores, empezando por la versión más reciente. Las indicaciones de instalación históricas se aplican a la versión indicada.
 
+## 1.7.1 – 19.11.2026
+
+### RareScanner
+- **Conservar el objetivo:** Un raro vivo de la lista sigue seleccionado si vuelves a pulsar el botón morado o su tecla rápida.
+
+### Barra de objetivos
+- **Búsquedas independientes:** El botón principal rojo busca objetivos de misión y, si RestedXP está activado en Quest Targets, también los del paso actual de la guía. Los botones azul de RestedXP, amarillo de ItemTree y morado de RareScanner buscan en sus propias listas.
+
 ## 1.7.0 – 19.11.2026
 
 ### RareScanner

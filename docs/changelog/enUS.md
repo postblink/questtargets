@@ -2,6 +2,14 @@
 
 Player-facing changes, newest version first. Historical installation notes apply to the version listed.
 
+## 1.7.1 – Nov 19, 2026
+
+### RareScanner
+- **Keep your target:** A living rare on the search list stays selected when you click the purple button again or press its hotkey.
+
+### Targeting bar
+- **Separate target searches:** The red master button looks for quest targets and adds targets from the active RestedXP guide step when enabled. The blue RestedXP, yellow ItemTree and purple RareScanner buttons each search their own list.
+
 ## 1.7.0 – Nov 19, 2026
 
 ### RareScanner

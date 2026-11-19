@@ -78,3 +78,8 @@ bar button. Its state driver disables the action during combat, and the
 button remains visible in its slot. The separate minimap overlay still uses
 its own combat visibility driver. The XERJ reference corpus was unavailable,
 so the existing local ItemTree binding served as the reference.
+
+Before replacing the macro on a bar click, RareScanner uses
+`Core.ValidCurrentTarget` to check that the current target is a living NPC
+in the active list. A valid target suppresses that click's macro and leaves
+the page cursor in place. XERJ located the shared target check in `Core.lua`.

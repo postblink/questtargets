@@ -213,7 +213,9 @@ end
 local function prepareMarkMacro(target, entry, clicked)
     if InCombatLockdown() then return end
     local macro, nextIndex
-    if entry and #entry.nameList > 1 then
+    if clicked and entry and NS.Core.ValidCurrentTarget(entry, true) then
+        macro = nil
+    elseif entry and #entry.nameList > 1 then
         NS.Proximity.Order(entry)
         if target.markKey ~= entry.proximityKey or target.markScope ~= entry.scope then target.markIndex = nil end
         target.markKey, target.markScope = entry.proximityKey, entry.scope

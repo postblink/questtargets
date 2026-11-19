@@ -2,6 +2,14 @@
 
 Oyuncuları ilgilendiren değişiklikler en yeni sürümden başlayarak sıralanır. Eski kurulum notları yalnızca belirtilen sürüm için geçerlidir.
 
+## 1.7.1 – 19.11.2026
+
+### RareScanner
+- **Hedefi koru:** Mor düğmeye yeniden tıkladığında veya kısayoluna bastığında arama listesindeki canlı nadir yaratık hedefte kalır.
+
+### Hedef çubuğu
+- **Ayrı hedef aramaları:** Kırmızı ana düğme görev hedeflerini ve RestedXP entegrasyonu açıksa etkin rehber adımının hedeflerini arar. Mavi RestedXP, sarı ItemTree ve mor RareScanner düğmeleri kendi listelerinde arama yapar.
+
 ## 1.7.0 – 19.11.2026
 
 ### RareScanner

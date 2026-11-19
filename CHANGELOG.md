@@ -4,6 +4,14 @@ Spielerchronik ab der ersten belegten Veröffentlichung. Die neueste Version ste
 
 [English](docs/changelog/enUS.md) · [Español](docs/changelog/esES.md) · [Français](docs/changelog/frFR.md) · [Türkçe](docs/changelog/trTR.md) · [简体中文](docs/changelog/zhCN.md)
 
+## 1.7.1 – 19.11.2026
+
+### RareScanner
+- **Ziel behalten:** Ein lebender Rare aus der Suchliste bleibt ausgewählt, wenn du den violetten Button erneut anklickst oder seinen Hotkey drückst.
+
+### Zielleiste
+- **Getrennte Zielsuche:** Der rote Hauptbutton sucht Questziele und bei aktiver RestedXP-Integration auch Ziele des aktuellen Guide-Schritts. Der blaue RestedXP-, gelbe ItemTree- und violette RareScanner-Button suchen jeweils in ihrer eigenen Liste.
+
 ## 1.7.0 – 19.11.2026
 
 ### RareScanner
