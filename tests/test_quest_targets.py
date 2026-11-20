@@ -428,6 +428,7 @@ class QuestTargetsTests(unittest.TestCase):
             local categoryID=71
             local layout={initializers={}}
             function layout:AddInitializer(item) self.initializers[#self.initializers+1]=item end
+            function layout:GetInitializers() return self.initializers end
             local function initializer(data)
                 return {data=data, GetName=function(self)
                     return self.data.setting and self.data.setting:GetName() or self.data.name
@@ -461,6 +462,7 @@ class QuestTargetsTests(unittest.TestCase):
             SettingsPanel={RepairDisplay=function() error('Direct native panel refresh') end,
                 GetSettingsList=function() return {Header={Title=headerTitle}} end,
                 DisplayCategory=function(_,category) headerTitle:SetText(category.name) end}
+            local nativeDisplayCategory=SettingsPanel.DisplayCategory
             SettingsInbound={RepairDisplay=function() nativeRepairs=(nativeRepairs or 0)+1 end}
             Settings={VarType={Boolean='boolean', Number='number'},
                 CreateElementInitializer=function(template,data)
@@ -512,12 +514,54 @@ class QuestTargetsTests(unittest.TestCase):
                 end,
                 RegisterAddOnCategory=function(category) nativeRegistered=category; nativeRegistrations=(nativeRegistrations or 0)+1 end,
                 OpenToCategory=function(id) assert(id==categoryID); nativeOpened=id end}
-            local buttonsLayout={initializers={},AddInitializer=layout.AddInitializer}
+            local buttonsLayout={initializers={},AddInitializer=layout.AddInitializer,GetInitializers=layout.GetInitializers}
             if settingsTestInterface==16001 then
-                Settings.RegisterVerticalLayoutSubcategory=function(parent,name)
+                SettingsListMixin={}
+                local nextLayout=0
+                CreateVerticalLayout=function()
+                    nextLayout=nextLayout+1
+                    return ({layout,buttonsLayout})[nextLayout]
+                end
+                local createFrame=CreateFrame
+                CreateFrame=function(kind,name,parent,template)
+                    if template~='SettingsListTemplate' then return createFrame(kind,name,parent,template) end
+                    local list=createFrame(kind,name,parent)
+                    list.template=template
+                    list.Header={Title=list:CreateFontString(nil,'ARTWORK'),
+                        DefaultsButton=createFrame('Button',nil,list,'UIPanelButtonTemplate')}
+                    list.Header.DefaultsButton.Text=list:CreateFontString(nil,'ARTWORK')
+                    function list:Display(rows) self.rows=rows end
+                    function list:RepairDisplay(pageLayout)
+                        assert(self.rows==pageLayout:GetInitializers())
+                        nativeRepairs=(nativeRepairs or 0)+1
+                    end
+                    return list
+                end
+                SettingsInbound.RepairDisplay=function() error('Shared Settings list refresh') end
+                Settings.RegisterVerticalLayoutCategory=function() error('Shared Settings list registration') end
+                Settings.CreateCheckboxInitializer=function(value,options,description)
+                    return initializer({kind='checkbox',setting=value,description=description})
+                end
+                Settings.CreateSliderInitializer=function(value,options)
+                    return initializer({kind='slider',setting=value,options=options})
+                end
+                Settings.CreateDropdownInitializer=function(value,choices)
+                    return initializer({kind='dropdown',setting=value,choices=choices})
+                end
+                Settings.RegisterCanvasLayoutCategory=function(page,name)
+                    nativeCategory={name=name,page=page,GetID=function() return categoryID end,
+                        SetName=function(self,value) self.name=value end}
+                    return nativeCategory
+                end
+                Settings.RegisterCanvasLayoutSubcategory=function(parent,page,name)
                     assert(parent==nativeCategory)
-                    local subcategory={name=name,layout=buttonsLayout,SetName=function(self,value) self.name=value end}
-                    return subcategory,buttonsLayout
+                    return {name=name,page=page,SetName=function(self,value) self.name=value end}
+                end
+                Settings.OpenToCategory=function(id)
+                    assert(id==categoryID)
+                    nativeOpened=id
+                    nativeCategory.page:Show()
+                    nativeCategory.page.scripts.OnShow()
                 end
             end
             nativeSettings={}
@@ -538,12 +582,23 @@ class QuestTargetsTests(unittest.TestCase):
             C_AddOns.GetAddOnMetadata=function() return '1.5.1-preview' end
             SettingsPanel:DisplayCategory(nativeCategory)
             assert(nativeCategory.name=='Quest Targets', 'Version leaked into sidebar')
-            assert(headerTitle.text=='Quest Targets 1.5.1-preview', 'Missing heading version')
+            if settingsTestInterface==16001 then
+                assert(SettingsPanel.DisplayCategory==nativeDisplayCategory, 'Hooked shared Forever Settings panel')
+                assert(headerTitle.text=='Quest Targets', 'Native heading should originate from Blizzard')
+                nativeCategory.page.scripts.OnShow()
+                assert(nativeCategory.page.Header.Title.text=='Quest Targets 1.5.1-preview')
+                assert(nativeCategory.page.rows==layout.initializers)
+            else
+                assert(headerTitle.text=='Quest Targets 1.5.1-preview', 'Missing heading version')
+            end
             SettingsPanel:DisplayCategory({name='Other addon'})
             assert(headerTitle.text=='Other addon', 'Changed another addon heading')
             C_AddOns.GetAddOnMetadata=nil
-            if Settings.RegisterVerticalLayoutSubcategory then
-                assert(NS.UI.nativeButtonsCategory.layout==buttonsLayout)
+            if settingsTestInterface==16001 then
+                local buttonsPage=NS.UI.nativeButtonsCategory.page
+                buttonsPage:Show()
+                buttonsPage.scripts.OnShow()
+                assert(buttonsPage.rows==buttonsLayout.initializers and buttonsPage~=nativeCategory.page)
                 assert(buttonsLayout.initializers[1].data.name==NS.L('buttons'))
                 assert(buttonsLayout.initializers[#buttonsLayout.initializers]==NS.UI.nativeMove)
                 for index,item in ipairs(layout.initializers) do

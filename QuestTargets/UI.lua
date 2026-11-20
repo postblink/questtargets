@@ -956,9 +956,12 @@ function QuestTargetsBindingSettingMixin:Release()
 end
 
 local function nativeSettings(app)
-    -- The native sidebar and heading share GetName(). Keep registration plain;
-    -- change only our displayed heading after Blizzard selects the category.
-    if SettingsPanel and SettingsPanel.DisplayCategory and UI.versionHeaderPanel ~= SettingsPanel then
+    local interface = GetBuildInfo and select(4, GetBuildInfo())
+    local forever = type(interface) == "number" and interface >= 16000 and interface < 17000
+    local privateList = forever and SettingsListMixin and CreateVerticalLayout
+        and Settings.RegisterCanvasLayoutCategory and Settings.RegisterCanvasLayoutSubcategory
+        and Settings.CreateCheckboxInitializer and Settings.CreateSliderInitializer and Settings.CreateDropdownInitializer
+    if not forever and SettingsPanel and SettingsPanel.DisplayCategory and UI.versionHeaderPanel ~= SettingsPanel then
         UI.versionHeaderPanel = SettingsPanel
         hooksecurefunc(SettingsPanel, "DisplayCategory", function(panel, selected)
             if not UI.nativeCategory or selected ~= UI.nativeCategory then return end
@@ -970,8 +973,36 @@ local function nativeSettings(app)
     end
     if UI.nativeCategory then return end
 
-    local category, layout = Settings.RegisterVerticalLayoutCategory(L("title"))
+    local function privatePage(parent, key)
+        -- Use the same template as SettingsPanel. A registered canvas keeps
+        -- this private list's initializers out of the shared results layout.
+        local page = CreateFrame("Frame", nil, nil, "SettingsListTemplate")
+        page:Hide()
+        local name = L(key)
+        local category
+        if parent then category = Settings.RegisterCanvasLayoutSubcategory(parent, page, name)
+        else category = Settings.RegisterCanvasLayoutCategory(page, name) end
+        local layout = CreateVerticalLayout()
+        local function updateTitle()
+            page.Header.Title:SetText(parent and L(key) or UI.OptionsTitle())
+        end
+        page.Header.DefaultsButton.Text:SetText(SETTINGS_DEFAULTS)
+        page.Header.DefaultsButton:SetScript("OnClick", function()
+            StaticPopup_Show("GAME_SETTINGS_APPLY_DEFAULTS")
+        end)
+        page:SetScript("OnShow", function()
+            updateTitle()
+            page:Display(layout:GetInitializers())
+        end)
+        page:SetScript("OnHide", stopBindingCapture)
+        return category, layout, page, updateTitle
+    end
+
+    local category, layout, page, updateTitle
+    if privateList then category, layout, page, updateTitle = privatePage(nil, "title")
+    else category, layout = Settings.RegisterVerticalLayoutCategory(L("title")) end
     local activeCategory, activeLayout = category, layout
+    local buttonsPage, buttonsLayout, updateButtonsTitle
     UI.nativeHeaders = {}
     UI.nativeButtons = {}
     local function section(key)
@@ -991,8 +1022,16 @@ local function nativeSettings(app)
         return initializer
     end
     local function checkboxSetting(key, default, get, set, descriptionKey)
-        return localizedRow(Settings.CreateCheckbox(activeCategory, setting(key, "Boolean", default, get, set),
-            descriptionKey and L(descriptionKey) or nil), key)
+        local value = setting(key, "Boolean", default, get, set)
+        local description = descriptionKey and L(descriptionKey)
+        local initializer
+        if privateList then
+            initializer = Settings.CreateCheckboxInitializer(value, nil, description)
+            activeLayout:AddInitializer(initializer)
+        else
+            initializer = Settings.CreateCheckbox(activeCategory, value, description)
+        end
+        return localizedRow(initializer, key)
     end
     local function sliderSetting(key, savedKey, minimum, maximum, step, pixels, defaultValue)
         local value = setting(key, "Number", defaultValue or (pixels and 35 or 1),
@@ -1005,15 +1044,29 @@ local function nativeSettings(app)
         options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right,
             function(number) return pixels and string.format("%d px", number)
                 or string.format("%d%%", math.floor(number * 100 + 0.5)) end)
-        return localizedRow(Settings.CreateSlider(activeCategory, value, options), key)
+        local initializer
+        if privateList then
+            initializer = Settings.CreateSliderInitializer(value, options)
+            activeLayout:AddInitializer(initializer)
+        else
+            initializer = Settings.CreateSlider(activeCategory, value, options)
+        end
+        return localizedRow(initializer, key)
     end
     local function dropdownSetting(key, default, get, set, choices)
         local value = setting(key, "Number", default, get, set)
-        local initializer = Settings.CreateDropdown(activeCategory, value, function()
+        local function menuOptions()
             local options = Settings.CreateControlTextContainer()
             for index, text in ipairs(choices()) do options:Add(index, text) end
             return options:GetData()
-        end)
+        end
+        local initializer
+        if privateList then
+            initializer = Settings.CreateDropdownInitializer(value, menuOptions)
+            activeLayout:AddInitializer(initializer)
+        else
+            initializer = Settings.CreateDropdown(activeCategory, value, menuOptions)
+        end
         localizedRow(initializer, key)
         return value, initializer
     end
@@ -1022,8 +1075,14 @@ local function nativeSettings(app)
             local row = entry.initializer.row
             if row then row:RefreshBindings() end
         end
-        -- Use the native attribute delegate, never the shared panel's method.
-        if SettingsInbound and SettingsInbound.RepairDisplay then SettingsInbound.RepairDisplay() end
+        if privateList then
+            updateTitle()
+            updateButtonsTitle()
+            if page:IsVisible() then page:RepairDisplay(layout) end
+            if buttonsPage:IsVisible() then buttonsPage:RepairDisplay(buttonsLayout) end
+        elseif SettingsInbound and SettingsInbound.RepairDisplay then
+            SettingsInbound.RepairDisplay()
+        end
     end
 
     section("display")
@@ -1059,7 +1118,11 @@ local function nativeSettings(app)
     checkboxSetting("muteDeadTargetSound", false, function() return app.db.muteDeadTargetSound end,
         function(value) app.db.muteDeadTargetSound = value end, "muteDeadTargetSoundTip")
 
-    if Settings.RegisterVerticalLayoutSubcategory then
+    if privateList then
+        activeCategory, activeLayout, buttonsPage, updateButtonsTitle = privatePage(category, "buttons")
+        buttonsLayout = activeLayout
+        UI.nativeButtonsCategory = activeCategory
+    elseif Settings.RegisterVerticalLayoutSubcategory then
         activeCategory, activeLayout = Settings.RegisterVerticalLayoutSubcategory(category, L("buttons"))
         UI.nativeButtonsCategory = activeCategory
     end
@@ -1081,6 +1144,7 @@ local function nativeSettings(app)
     questieToggle:AddModifyPredicate(function() return addonLoaded("Questie") end)
     local questieOffset = sliderSetting("questieTrackerOffset", "questieTrackerOffset", -240, 240, 1, true)
     questieOffset:SetParentInitializer(questieToggle)
+    if privateList then questieOffset.IsParentInitializerInLayout = function() return true end end
     questieOffset:AddModifyPredicate(function()
         return addonLoaded("Questie") and app.db.questieTrackerButtons
     end)
@@ -1096,6 +1160,7 @@ local function nativeSettings(app)
 
     local ellesmereOffset = sliderSetting("ellesmereTrackerOffset", "ellesmereTrackerOffset", -240, 240, 1, true, 0)
     ellesmereOffset:SetParentInitializer(ellesmereToggle)
+    if privateList then ellesmereOffset.IsParentInitializerInLayout = questieOffset.IsParentInitializerInLayout end
     ellesmereOffset:AddModifyPredicate(function()
         return NS.EllesmereTracker.Available() and app.db.ellesmereTrackerButtons ~= false
     end)

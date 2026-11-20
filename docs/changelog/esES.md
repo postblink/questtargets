@@ -2,6 +2,11 @@
 
 Cambios para jugadores, empezando por la versión más reciente. Las indicaciones de instalación históricas se aplican a la versión indicada.
 
+## 1.7.3 – 20.11.2026
+
+### Opciones
+- Corregido un error en los **ajustes sociales** de Blizzard.
+
 ## 1.7.2 – 19.11.2026
 
 ### RareScanner

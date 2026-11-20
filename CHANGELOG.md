@@ -4,6 +4,11 @@ Spielerchronik ab der ersten belegten Veröffentlichung. Die neueste Version ste
 
 [English](docs/changelog/enUS.md) · [Español](docs/changelog/esES.md) · [Français](docs/changelog/frFR.md) · [Türkçe](docs/changelog/trTR.md) · [简体中文](docs/changelog/zhCN.md)
 
+## 1.7.3 – 20.11.2026
+
+### Optionen
+- Fehler in Blizzards **Kontaktoptionen** behoben.
+
 ## 1.7.2 – 19.11.2026
 
 ### RareScanner

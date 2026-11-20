@@ -2,6 +2,11 @@
 
 Oyuncuları ilgilendiren değişiklikler en yeni sürümden başlayarak sıralanır. Eski kurulum notları yalnızca belirtilen sürüm için geçerlidir.
 
+## 1.7.3 – 20.11.2026
+
+### Seçenekler
+- Blizzard’ın **sosyal ayarlarındaki** bir hata düzeltildi.
+
 ## 1.7.2 – 19.11.2026
 
 ### RareScanner

@@ -2,6 +2,11 @@
 local _, NS = ...
 NS.PatchNotesData = {
     deDE = {
+        { version = "1.7.3", date = "20.11.2026", sections = {
+                { title = "Optionen", items = {
+                    "Fehler in Blizzards **Kontaktoptionen** behoben.",
+                }},
+            }},
         { version = "1.7.2", date = "19.11.2026", sections = {
                 { title = "RareScanner", items = {
                     "**Nächste Rares zuerst:** Der violette Button sortiert markierte Rares und die Gebietsliste nach der Entfernung zum nächsten bekannten RareScanner-Spawnpunkt. So landen nahe Rares früher im Suchmakro.",
@@ -225,6 +230,11 @@ NS.PatchNotesData = {
             }},
     },
     enUS = {
+        { version = "1.7.3", date = "Nov 20, 2026", sections = {
+                { title = "Options", items = {
+                    "Fixed an error in Blizzard's **Social settings**.",
+                }},
+            }},
         { version = "1.7.2", date = "Nov 19, 2026", sections = {
                 { title = "RareScanner", items = {
                     "**Nearest rares first:** The purple button orders marked rares and the zone list by distance to the nearest known RareScanner spawn point, so nearby rares are checked sooner.",
@@ -448,6 +458,11 @@ NS.PatchNotesData = {
             }},
     },
     esES = {
+        { version = "1.7.3", date = "20.11.2026", sections = {
+                { title = "Opciones", items = {
+                    "Corregido un error en los **ajustes sociales** de Blizzard.",
+                }},
+            }},
         { version = "1.7.2", date = "19.11.2026", sections = {
                 { title = "RareScanner", items = {
                     "**Primero los raros más cercanos:** El botón morado ordena los raros marcados y los de la zona por distancia a su punto de aparición conocido más cercano en RareScanner.",
@@ -671,6 +686,11 @@ NS.PatchNotesData = {
             }},
     },
     frFR = {
+        { version = "1.7.3", date = "20.11.2026", sections = {
+                { title = "Options", items = {
+                    "Correction d’une erreur dans les **options sociales** de Blizzard.",
+                }},
+            }},
         { version = "1.7.2", date = "19.11.2026", sections = {
                 { title = "RareScanner", items = {
                     "**Rares les plus proches en premier :** Le bouton violet trie les rares marqués et ceux de la zone selon la distance à leur point d’apparition connu le plus proche dans RareScanner.",
@@ -894,6 +914,11 @@ NS.PatchNotesData = {
             }},
     },
     trTR = {
+        { version = "1.7.3", date = "20.11.2026", sections = {
+                { title = "Seçenekler", items = {
+                    "Blizzard’ın **sosyal ayarlarındaki** bir hata düzeltildi.",
+                }},
+            }},
         { version = "1.7.2", date = "19.11.2026", sections = {
                 { title = "RareScanner", items = {
                     "**En yakın nadirler önce:** Mor düğme, işaretli nadirleri ve bölge listesini RareScanner’daki en yakın bilinen ortaya çıkma noktasının uzaklığına göre sıralar.",
@@ -1117,6 +1142,11 @@ NS.PatchNotesData = {
             }},
     },
     zhCN = {
+        { version = "1.7.3", date = "2026年11月20日", sections = {
+                { title = "选项", items = {
+                    "修复了暴雪**社交设置**中的一个错误。",
+                }},
+            }},
         { version = "1.7.2", date = "2026年11月19日", sections = {
                 { title = "RareScanner", items = {
                     "**优先搜索附近的稀有怪：** 紫色按钮会按 RareScanner 已知的最近刷新点距离，对已标记稀有怪和当前区域列表排序。",

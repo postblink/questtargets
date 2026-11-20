@@ -2,6 +2,11 @@
 
 Player-facing changes, newest version first. Historical installation notes apply to the version listed.
 
+## 1.7.3 – Nov 20, 2026
+
+### Options
+- Fixed an error in Blizzard's **Social settings**.
+
 ## 1.7.2 – Nov 19, 2026
 
 ### RareScanner
