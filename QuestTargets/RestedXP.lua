@@ -1,6 +1,6 @@
 local _, NS = ...
 local Core, UI = NS.Core, NS.UI
-local Integration = {targets = {}, cursor = 1}
+local Integration = {targets = {}, cursor = 1, guideCursor = 1}
 NS.RestedXP = Integration
 
 local function restedXP()
@@ -118,12 +118,21 @@ local function createButton()
     button:SetAttribute("useOnKeyDown", false)
     UI.StyleTargetButton(button, 0.28, 0.65, 1)
     button:SetScript("PreClick", function(self, mouseButton, down)
-        if mouseButton == "LeftButton" and not down then Integration.PreClick(NS.app, self) end
+        if mouseButton ~= "LeftButton" or down then return end
+        local app = NS.app
+        if InCombatLockdown() then
+            Core.PrepareDeadTargetSound(self:GetAttribute("macrotext1"), app.db)
+        elseif Integration.active and self.entry then
+            local macro = Core.ClickMacro(self.entry, {}, app.db, nil, Integration.guideTargets)
+            Core.SetClickMacro(self, macro, app.db)
+        end
     end)
     button:SetScript("PostClick", function(self, mouseButton, down)
-        if mouseButton ~= "LeftButton" or down then return end
+        if mouseButton ~= "LeftButton" or down or InCombatLockdown() or not Integration.active
+            or not self.entry then return end
         Core.RecordClickResult()
-        Integration.PostClick(NS.app)
+        Integration.guideCursor = Integration.guideCursor % #Integration.targets + 1
+        Integration.Sync(NS.app)
     end)
     button:SetScript("OnEnter", function(self)
         if not NS.app.db.showTooltips then return end
@@ -137,22 +146,40 @@ local function createButton()
     return button
 end
 
-local function setMacro(button, entry, settings)
+local function setMacro(button, entry, settings, preserveEntry)
     if not button then return end
     button.entry = entry
     local macro = entry and Core.EntryMacro(entry, settings) or nil
-    if entry and Integration.active and Integration.allEntry
-        and Core.ValidCurrentTarget(Integration.allEntry) then
+    if entry and preserveEntry and Core.ValidCurrentTarget(preserveEntry) then
         local name = Core.SafeName(UnitName("target"))
-        local friendly = Integration.allEntry.finisherNames[name]
+        local friendly = preserveEntry.finisherNames[name]
         macro = Core.MarkerMacro(settings, true, friendly)
     end
     button:SetAttribute("macrotext1", macro)
 end
 
+local function guideEntry(name, friendlyNames, provider)
+    if not name then return end
+    local friendly = friendlyNames[name]
+    return {name=name, title=NS.L(provider == "polestar" and "polestarButton" or "restedXPButton"), questID=0,
+        nameList={name}, names={[name]=true}, refs={},
+        finisherNames=friendly and {[name]=true} or {},
+        mobCount=friendly and 0 or 1, turnInCount=friendly and 1 or 0}
+end
+
 local function appendNativeFallback(macro, base, settings)
     if not macro or not macro:find("/cleartarget", 1, true)
         or not base or not base.nameList or #base.nameList == 0 then return macro end
+    local proximity = NS.Proximity
+    if proximity then
+        proximity.Order(base)
+        if proximity.MovedFrom(Integration.nativePosition)
+            or (Integration.nativeProximityKey and Integration.nativeProximityKey ~= base.proximityKey) then
+            Integration.nativeCursor = 1
+        end
+        Integration.nativePosition = proximity.position
+        Integration.nativeProximityKey = base.proximityKey
+    end
     local marker = Core.MarkerMacro(settings, true)
     -- Native targets can shrink while the active guide step stays unchanged.
     local index = ((Integration.nativeCursor or 1) - 1) % #base.nameList + 1
@@ -179,8 +206,10 @@ function Integration.Sync(app)
     if not Integration.active then
         Integration.targets = {}
         Integration.allEntry = nil
+        Integration.guideTargets = nil
         Integration.signature = nil
         Integration.cursor = 1
+        Integration.guideCursor = 1
         Integration.nativeCursor = 1
         Integration.fallbackOnce = false
         if wasActive then setMacro(UI.master, UI.master.defaultEntry, app.db) end
@@ -204,35 +233,35 @@ function Integration.Sync(app)
     local signature = Integration.provider .. "\n" .. table.concat(signatureParts, "\n")
     if signature ~= Integration.signature then
         Integration.cursor = 1
+        Integration.guideCursor = 1
         Integration.nativeCursor = 1
         Integration.fallbackOnce = false
     end
     Integration.signature = signature
     Integration.targets = names
-    local allNames, allFriendly = {}, {}
+    local allNames, allFriendly, guideNames = {}, {}, {}
     for target in pairs(base.names or {}) do allNames[target] = true end
     for target in pairs(base.finisherNames or {}) do allFriendly[target] = true end
     for _, target in ipairs(names) do
         allNames[target] = true
+        guideNames[target] = true
         if guideFriendlyNames[target]
             or (base.finisherNames and base.finisherNames[target]) then
             allFriendly[target] = true
+            guideFriendlyNames[target] = true
         end
     end
     Integration.allEntry = {names=allNames, finisherNames=allFriendly}
+    Integration.guideTargets = {names=guideNames, finisherNames=guideFriendlyNames}
     local name = names[Integration.cursor]
-    local finisher = name and (guideFriendlyNames[name]
-        or (base.finisherNames and base.finisherNames[name] == true))
-    local guideEntry = name and {name=name, title=NS.L(rxp and "restedXPButton" or "polestarButton"), questID=0,
-        nameList={name}, names={[name]=true}, refs=base.refs or {},
-        finisherNames=finisher and {[name]=true} or {},
-        mobCount=finisher and 0 or 1, turnInCount=finisher and 1 or 0} or nil
-    local entry = (not name or Integration.fallbackOnce) and base.name and base or guideEntry
-    setMacro(UI.master, entry, app.db)
+    local entry = (not name or Integration.fallbackOnce) and base.name and base
+        or guideEntry(name, guideFriendlyNames, Integration.provider)
+    setMacro(UI.master, entry, app.db, Integration.allEntry)
 
     if rxp then
         if not Integration.button then Integration.button = createButton() end
-        setMacro(Integration.button, entry, app.db)
+        setMacro(Integration.button, guideEntry(names[Integration.guideCursor], guideFriendlyNames),
+            app.db, Integration.guideTargets)
         Integration.button:Show()
     elseif Integration.button then
         setMacro(Integration.button, nil, app.db)
@@ -256,7 +285,7 @@ function Integration.PreClick(app, button)
     if native then
         button.nativeState = button.nativeState or {}
         button.nativeState.entry = entry
-        macro = Core.ClickMacro(entry, app.allEntries or {}, app.db,
+        macro = Core.ClickMacro(entry, {}, app.db,
             button.nativeState, Integration.allEntry)
     else
         button.rxpState = {entry=entry}

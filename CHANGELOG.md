@@ -1,0 +1,236 @@
+# Quest Targets – Patchnotes
+
+Spielerchronik ab der ersten belegten Veröffentlichung. Die neueste Version steht oben. Historische Angaben zu Downloads und QuestieDB gelten jeweils für die genannte Version.
+
+[English](docs/changelog/enUS.md) · [Español](docs/changelog/esES.md) · [Français](docs/changelog/frFR.md) · [Türkçe](docs/changelog/trTR.md) · [简体中文](docs/changelog/zhCN.md)
+
+## 1.7.4 – Vorschau
+
+### Polestar
+- **Polestar-Guideziele:** In WoW Forever kannst du mit installiertem Polestar unter **Buttons → Zielleiste → Polestar-Guideziele verwenden** die standardmäßig ausgeschaltete Option aktivieren. Der Hauptbutton sucht benannte offene Ziele des angezeigten Guide-Schritts; ohne Ziele übernimmt die Questsuche. Änderungen werden nach dem Kampf angewendet. Ist auch RestedXP aktiv und verfügbar, hat es Vorrang.
+
+## 1.7.3 – 20.11.2026
+
+### Optionen
+- Fehler in Blizzards **Kontaktoptionen** behoben.
+
+## 1.7.2 – 19.11.2026
+
+### RareScanner
+- **Nächste Rares zuerst:** Der violette Button sortiert markierte Rares und die Gebietsliste nach der Entfernung zum nächsten bekannten RareScanner-Spawnpunkt. So landen nahe Rares früher im Suchmakro.
+
+### Zielleiste
+- **Aktuelle Position bei jedem Klick:** Für die Suche nach Entfernung lesen die Zielbuttons deine Position außerhalb des Kampfes erst beim Klick oder Hotkey ein. Hast du dich bewegt, startet die Suche oben in der aktualisierten Liste. Bleibst du stehen, prüfen weitere Klicks die nächsten Namen.
+
+## 1.7.1 – 19.11.2026
+
+### RareScanner
+- **Ziel behalten:** Ein lebender Rare aus der Suchliste bleibt ausgewählt, wenn du den violetten Button erneut anklickst oder seinen Hotkey drückst.
+
+### Zielleiste
+- **Getrennte Zielsuche:** Der rote Hauptbutton sucht Questziele und bei aktiver RestedXP-Integration auch Ziele des aktuellen Guide-Schritts. Der blaue RestedXP-, gelbe ItemTree- und violette RareScanner-Button suchen jeweils in ihrer eigenen Liste.
+
+## 1.7.0 – 19.11.2026
+
+### RareScanner
+- **WoW Forever:** Die Zielsuche benötigt das Addon RareScanner. Sie funktioniert außerhalb des Kampfes und innerhalb von WoWs Zielreichweite.
+- **Weltkarte:** Markiere Rare-NPCs per Linksklick. Klicke den violetten **RareScanner Button** in der Zielleiste an, um alle markierten Seltenen zu suchen. Der Tooltip zeigt die Suchliste.
+- **RareScanner-Makro:** Je nach Namenslänge passen in der Regel **2–4 Rare-Mobs pro Klick** ins Makro. Sind mehr Rares in der Suchliste, klicke erneut, um die nächsten zu prüfen.
+- **Show RareScanner Button:** Unter **Buttons → Zielleiste** kannst du den standardmäßig sichtbaren Kompass ausblenden. Ohne Suchziele ist er grau. Im Kampf bleibt er sichtbar und die Suche ist gesperrt.
+- **RareScanner-Rares anvisieren:** Unter **Tastenkürzel** kannst du zwei Tasten für den violetten Button belegen. Die Tasten lösen dieselbe Suche aus wie ein Linksklick.
+- **Alle Rares im Gebiet suchen:** Aktiviere die Option unter **Buttons → Zielleiste**, damit der RareScanner Button alle Rare-NPCs aus RareScanners Liste für dein aktuelles Gebiet sucht, auch ohne Markierung. Die Liste wechselt mit dem Gebiet und berücksichtigt auch Rares im aktuellen Dungeon, wenn RareScanner sie kennt. Standardmäßig ist die Option aus.
+- **Minimap:** Linksklick auf das RareScanner-Symbol eines Seltenen sucht diesen Gegner. Der **Radarimpuls** bestätigt den Klick. Fängt die Minimap den ersten Klick ab, startet der nächste Klick den Zielversuch.
+
+### Zielleiste
+- **Zielleiste:** Unter **Buttons → Zielleiste** stellst du die **Button-Anordnung** auf horizontal oder vertikal und den **Button-Abstand** auf 0–32 px. Mit **Bronzerahmen anzeigen** erhält die gesamte Leiste einen gemeinsamen Bronzerahmen mit abgeschrägten Ecken im Stil der FlareUI-Einheitenfenster. Standardmäßig ist die Leiste horizontal, mit 4 px Abstand und ausgeschaltetem Rahmen.
+- **Trennlinien anzeigen:** Schalte die gold-silbernen Linien mit Sternen unabhängig vom Bronzerahmen ein oder aus. Die Linien drehen sich bei vertikaler Anordnung mit.
+- **Moderner Quest-Kompass:** Der klassische Textbutton und seine Optionen für Breite, Höhe und Schriftzug entfallen. Beim Update wechselt ein klassischer Button automatisch zum Kompass. Die Position bleibt gespeichert, die Größe stellst du unter **Buttons → Zielleiste → Buttongröße** ein.
+
+### Patchnotes-Fenster
+- **Patchnotes:** Beim ersten Login mit einer neuen Version öffnet sich die Chronik einmal pro Account und bleibt offen, bis du sie schließt. Du findest sie unter **Optionen → AddOns → Quest Targets → Patchnotes**. Die Chronik folgt deiner gewählten Addon-Sprache.
+
+## 1.6.1 – 15.11.2026
+
+### Neu
+- **EllesmereUI:** Auf Forever gibt es Zielbuttons am Custom Quest Tracker. Linksklick sucht ein Ziel, Rechtsklick setzt den Questfokus.
+- **Feedback:** Der Dialog zeigt einen QR-Code für das Formular.
+
+### Verbessert
+- Maustasten, Mausrad und Tastenkombinationen lassen sich überall im Spielfenster als Ziel-Hotkey erfassen.
+- Questie und EllesmereUI haben getrennte Abstandsregler. Ihre Optionen stehen unter „Buttons“.
+- Der Ton beim Abwählen eines Ziels lässt sich optional dämpfen.
+
+## 1.6.0 – 10.11.2026
+
+### Neu
+- **ItemTree-Integration:** Installiere und aktiviere ItemTree separat. Öffne bei einer Zutat die Ansicht **Quellen**, klappe bei Bedarf **Mehr anzeigen** auf und klicke **Mobs übernehmen**. Quest Targets übernimmt die Gegner, die die Zutat fallen lassen.
+- **ItemTree-Zielsuche:** Aktiviere unter **Buttons → ItemTree-Button anzeigen** den gelben Kompass oder belege unter **Hotkeys → ItemTree-Mobs anvisieren** eine Taste. Wenn ein Klick nichts findet, klick erneut, um weitere Namen zu prüfen.
+- **Aktionsleisten-Makro:** Beim Import legt Quest Targets nach Möglichkeit das Charaktermakro **ItemTree Mobs** an. Du kannst es aus dem Makrofenster in die Aktionsleiste ziehen. Der Zielbutton und sein Hotkey funktionieren auch ohne freien Makroplatz.
+- Die **Zielleiste** zeigt den roten Masterbutton, den blauen RestedXP-Button und den gelben ItemTree-Button.
+
+### Verbessert
+- Die drei Buttons lassen sich gemeinsam verschieben und skalieren. Du wählst, welche sichtbar sind.
+- Die ItemTree-Suche bevorzugt Ziele in deiner Zone und berücksichtigt bekannte Spawnpunkte.
+
+## 1.5.1 – 03.11.2026
+
+### Neu
+- Das Questfenster lässt sich an der **unteren rechten Ecke** vergrößern. Größe und Position bleiben gespeichert.
+- Questies Zielbuttons lassen sich abschalten und ihr Abstand lässt sich einstellen.
+
+### Verbessert
+- Der **Minimap-Button** funktioniert besser mit Addons, die Minimap-Buttons sammeln.
+- Die installierte Version steht in den Optionen. Neue Einstellungen starten mit dem Kompass als Masterbutton.
+
+## 1.5.0 – 03.11.2026
+
+### Verbessert
+- Ein gemeinsamer Download unterstützt Classic Era, Burning Crusade Classic, Mists of Pandaria Classic, Forever und Retail.
+- Quest Targets wählt die Questdaten für deinen Client. QuestieDB wird auf den Clients, die es brauchen, separat installiert.
+
+## 1.4.2 – 03.11.2026
+
+### Verbessert
+- **QuestieDB** ist ein eigener Download und kann unabhängig aktualisiert werden. Für Retail ist es nicht erforderlich.
+
+## 1.4.1 – 02.11.2026
+
+### Verbessert
+- Master und Fokus stehen mit beiden Belegungsplätzen in WoWs Tastenbelegung. Bei einer bereits belegten Taste fragt Quest Targets vor dem Überschreiben nach.
+- Quest Targets erscheint direkt nach dem Login in den AddOn-Optionen. Regler für die jeweils andere Button-Optik sind ausgegraut.
+
+### Behoben
+- Änderungen und Löschungen in WoWs Tastenbelegung bleiben nach einem Neuladen erhalten.
+- Rechtsklick öffnet das Questlog nur außerhalb des Kampfes. Karten- und Zielzuordnungen wurden zuverlässiger.
+
+## 1.4.0 – 30.10.2026
+
+### Neu
+- Master und Fokus haben jeweils zwei Hotkey-Plätze für Tastatur und unterstützte Controller.
+
+### Verbessert
+- Eine Belegung lässt sich ändern oder löschen, ohne die zweite zu verlieren. Escape bricht die Eingabe ab.
+
+## 1.3.0 – 29.10.2026
+
+### Verbessert
+- Die neue Masterbutton-Positionierung und QuestieDB 1.0.9 aus 1.2.9 wurden als Version 1.3.0 zusammen veröffentlicht.
+
+## 1.2.9 – 28.10.2026
+
+### Neu
+- **Masterbutton verschieben** zeigt einen Ziehgriff in den Einstellungen. „Fertig“ speichert, Escape bricht ab und „Zurücksetzen“ zeigt die Standardposition.
+
+### Verbessert
+- Die Classic- und Forever-Pakete enthielten die zu ihrem Client passende QuestieDB 1.0.9.
+
+## 1.2.8 – 16.10.2026
+
+### Behoben
+- QuestieDB 1.0.6 in den damaligen Paketen stellte die Kompatibilität mit Questie 12.1.0 wieder her.
+
+## 1.2.7 – 15.10.2026
+
+### Neu
+- Mit **/qt debug** siehst du Informationen zur letzten Zielsuche.
+
+### Behoben
+- WoWs **Aktionsleiste** bleibt nach dem Ändern der Addon-Optionen bedienbar.
+
+## 1.2.6 – 12.10.2026
+
+### Behoben
+- Master- und RestedXP-Button bleiben bedienbar, wenn die Liste der passenden Questziele während eines Guide-Schritts kleiner oder leer wird.
+
+## 1.2.5 – 09.10.2026
+
+### Neu
+- Rechtsklick auf ein Quest-Symbol in Quest Targets oder Questie setzt den Fokus. Ein eigener Hotkey sucht nur Ziele für diese Quest.
+- Kompakte native Optionen mit direkt bearbeitbarem Masterbutton-Text.
+
+### Verbessert
+- Questies Zielbuttons erscheinen automatisch. RestedXP berücksichtigt die aktuell offenen Ziele des Guide-Schritts.
+- Questfenster, Scrollen und Ziehen wurden zuverlässiger. Erledigte Ziele bleiben nicht in der Suche hängen.
+
+## 1.2.4 – 04.10.2026
+
+### Verbessert
+- Wenn RestedXP kein passendes Ziel liefert, kann die Suche zu offenen Quests zurückkehren.
+- Ein gültiges Ziel bleibt bei weiteren Klicks ausgewählt, solange keine sichtbare passende Alternative gefunden wird.
+
+## 1.2.3 – 03.10.2026
+
+### Neu
+- RestedXP kann ausdrücklich genannte Questgeber schon vor der Questannahme als Ziele anbieten.
+- Unterstützung für Burning Crusade Classic und Mists of Pandaria Classic.
+
+### Verbessert
+- Quest Targets steht in der AddOn-Liste unter „Quests“. Auf Classic Era zeigen Questies Zielbuttons den Kompass.
+
+## 1.2.2 – 03.10.2026
+
+### Neu
+- Die optionale RestedXP-Integration sucht nach passenden Zielen im aktiven Guide-Schritt. Ein Zielbutton erscheint bei RestedXP.
+
+## 1.2.1 – 02.10.2026
+
+### Neu
+- Optionaler Zielbutton neben jeder Quest in Questies Tracker.
+
+### Verbessert
+- Neue Forever-Schnittstellenversion, überarbeitete Masterbutton-Größe und ein WoW-Rahmen für den Minimap-Button.
+- Im transparenten Questfenster erscheinen Ziehhilfe und Umschalter bei Mausberührung. Einstellungen und Feedback stehen nebeneinander.
+
+## 1.2.0 – 30.09.2026
+
+### Neu
+- **Retail 12.1** wird unterstützt. Dafür liest Quest Targets das laufende Questlog und sichtbare Namensplaketten ohne QuestieDB.
+
+### Behoben
+- Wenn das Questlog nicht gelesen werden kann, erscheint ein Hinweis statt einer scheinbar leeren Liste.
+
+## 1.1.0 – 28.09.2026
+
+### Neu
+- Die **transparente Ansicht** lässt nur die Questliste stehen. Das Auge am Fenster schaltet die Ansicht um und blendet sich nach kurzer Zeit aus.
+
+### Verbessert
+- Schließen-Button und Scrollleiste wurden an das neue Layout angepasst.
+
+## 1.0.22 – 28.09.2026
+
+### Verbessert
+- Die Datenanbindung an QuestieDB wurde aktualisiert. Die öffentliche Addon-Datei nutzte weiterhin den passenden separaten Datenanbieter.
+
+## 1.0.16 – 27.09.2026
+
+### Neu
+- Der **Feedbackbutton** öffnet einen kopierbaren Link für Fehlerberichte und Wünsche. Dafür ist kein GitHub-Konto nötig.
+
+## 1.0.15 – 27.09.2026
+
+### Verbessert
+- **Mausrad und Scrollleiste** ersetzen die Seitenpfeile. Ein Regler in den Optionen ändert die Fenstergröße.
+- Tooltips wurden vereinfacht, Hotkeys bekamen einen eigenen Bereich und alle sechs Sprachen wurden aktualisiert.
+
+## 1.0.13 – 25.09.2026
+
+### Verbessert
+- Fehlt QuestieDB, verweist der Hinweis auf das passende Paket für Classic Era oder Forever. Der Link lässt sich im Fenster zum Kopieren auswählen.
+
+## 1.0.12 – 25.09.2026
+
+### Neu
+- Unterstützung für **WoW Classic Era** 1.15.9 neben der Forever-Beta.
+
+### Behoben
+- Classic-Quests, Verfolgung, Abschluss und Rechtsklick ins Questlog werden korrekt gelesen. Classic-Spawnkoordinaten bleiben unverändert.
+
+## 1.0.11 – 25.09.2026
+
+### Neu
+- Erste belegte Version für die Forever-Beta. Ein Button pro Quest und ein **Masterbutton** suchen nach offenen Questmobs oder abgabebereiten NPCs.
+- QuestieDB ergänzt Ziele aus Killquests, gemeinsame Killziele und Gegner, die benötigte Gegenstände fallen lassen. Lesbare Namensplaketten können weitere passende Ziele liefern.
+- Die Questliste zeigt den Fortschritt, filtert verfolgte Quests und öffnet mit Rechtsklick das Questlog. /qt öffnet und schließt das Fenster.
+- Zielmarkierung, Hotkey, Tooltips und sechs Sprachen lassen sich in den WoW-Optionen einstellen.
+- Der Quest-Kompass erscheint an der Minimap und kann als beweglicher Masterbutton genutzt werden. Die klassische Variante kann einen eigenen Text anzeigen.

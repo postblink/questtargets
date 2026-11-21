@@ -21,10 +21,18 @@ end
 local MASTER_BINDING = "CLICK QuestTargetsMaster:LeftButton"
 local FOCUS_BINDING = "CLICK QuestTargetsFocused:LeftButton"
 local ITEMTREE_BINDING = "CLICK QuestTargetsItemTree:LeftButton"
+local RARESCANNER_BINDING = "CLICK QuestTargetsRareScannerMark:LeftButton"
 local function bindingAction(focused)
     if focused == "itemTree" then return ITEMTREE_BINDING, "QuestTargetsItemTree" end
+    if focused == "rareScanner" then return RARESCANNER_BINDING, "QuestTargetsRareScannerMark" end
     if focused then return FOCUS_BINDING, "QuestTargetsFocused" end
     return MASTER_BINDING, "QuestTargetsMaster"
+end
+
+local function bindingAvailable(action)
+    if action == "itemTree" then return addonLoaded("ItemTree") end
+    if action == "rareScanner" then return NS.RareScanner.MarkingAvailable() end
+    return true
 end
 
 local function bindingText(key)
@@ -141,6 +149,7 @@ local function bindingActionName(command)
     if command == MASTER_BINDING then return L("masterDefault") end
     if command == FOCUS_BINDING then return L("focusHotkey") end
     if command == ITEMTREE_BINDING then return L("itemTreeBinding") end
+    if command == RARESCANNER_BINDING then return L("rareScannerBinding") end
     return GetBindingName and GetBindingName(command) or command
 end
 
@@ -707,7 +716,7 @@ function UI.LayoutSettings(app)
     local panel, master = UI.settings, UI.masterSettings
     panel.pages, panel.tabs, panel.groups = {}, {}, {}
     local keys = {"general", "targetMarkers", "buttons", "hotkeys"}
-    local heights = {500, 340, 1204, 248}
+    local heights = {500, 340, 1010, 310}
     panel.body = CreateFrame("Frame", nil, panel, "BackdropTemplate")
     panel.body:SetPoint("TOPLEFT", 8, -78)
     panel.body:SetPoint("BOTTOMRIGHT", -8, 8)
@@ -752,27 +761,32 @@ function UI.LayoutSettings(app)
     local window = settingsBox(general, "window", -191, 125)
     local language = settingsBox(general, "language", -350, 102)
     local marking = settingsBox(markers, "targetMarkers", -32, 292)
-    local toggles = settingsBox(master, "buttons", -32, 470)
-    local appearance = settingsBox(master, "masterAppearance", -526, 84)
-    local dimensions = settingsBox(master, "buttonSize", -644, 220)
-    local caption = settingsBox(master, "caption", -898, 112)
-    local position = settingsBox(master, "masterMove", -1044, 132)
-    master.positionGroup = position
-    local bindings = settingsBox(hotkeys, "hotkeys", -32, 233)
-    panel.groups = {display, window, language, marking, toggles, appearance, dimensions, caption, position, bindings}
+    local toggles = settingsBox(master, "buttons", -32, 334)
+    local bar = settingsBox(master, "targetBar", -390, 595)
+    local bindings = settingsBox(hotkeys, "hotkeys", -32, 271)
+    panel.groups = {display, window, language, marking, toggles, bar, bindings}
     panel.displayText:Hide()
     panel.languageText:Hide()
     panel.hotkeysText:Hide()
     for i, control in ipairs({panel.menuToggle, panel.transparencyToggle}) do
         place(control, display, 18, -32 - (i-1)*30)
     end
-    for i, control in ipairs({panel.masterToggle, panel.restedXPToggle, panel.polestarToggle, panel.itemTreeToggle,
-        panel.tooltipToggle, panel.minimapToggle, panel.questieTrackerToggle}) do
+    for i, control in ipairs({panel.tooltipToggle, panel.minimapToggle, panel.questieTrackerToggle}) do
         place(control, toggles, 18, -32 - (i-1)*30)
     end
-    place(panel.questieOffsetControl, toggles, 22, -243)
-    place(panel.ellesmereToggle, toggles, 18, -333)
-    place(panel.ellesmereOffsetControl, toggles, 22, -363)
+    place(panel.questieOffsetControl, toggles, 22, -122)
+    place(panel.ellesmereToggle, toggles, 18, -210)
+    place(panel.ellesmereOffsetControl, toggles, 22, -240)
+    for i, control in ipairs({panel.masterToggle, panel.restedXPToggle, panel.polestarToggle, panel.itemTreeToggle,
+        panel.rareScannerToggle, panel.rareScannerZoneToggle}) do
+        place(control, bar, 18, -32 - (i-1)*30)
+    end
+    place(master.orientationLabel, bar, 22, -217)
+    place(master.orientationDropdown, bar, 176, -209)
+    place(master.spacingControl, bar, 22, -250)
+    master.spacingControl:SetPoint("TOPRIGHT", bar, "TOPRIGHT", -22, -250)
+    place(master.borderToggle, bar, 18, -419)
+    place(master.dividersToggle, bar, 18, -449)
     place(panel.scaleControl, window, 22, -31)
     panel.scaleControl:SetPoint("TOPRIGHT", window, "TOPRIGHT", -22, -31)
     place(panel.languageDropdown, language, 2, -42)
@@ -782,32 +796,21 @@ function UI.LayoutSettings(app)
     for index, choice in ipairs(panel.icons) do
         place(choice, marking, 20 + ((index - 1) % 4)*85, -103 - math.floor((index-1)/4)* 60)
     end
-    master.titleText:Hide()
-    master.appearanceText:Hide()
-    master.sizeNote:Hide()
-    master.captionText:Hide()
-    place(master.classicButton, appearance, 20, -42)
-    place(master.modernButton, appearance, 155, -42)
-    for i, field in ipairs({master.widthControl, master.heightControl, master.modernScaleControl}) do
-        local y = i == 2 and -125 or -34
-        place(field, dimensions, 22, y)
-        field:SetPoint("TOPRIGHT", dimensions, "TOPRIGHT", -22, y)
-    end
-    master.captionGroup = caption
-    master.dimensionsGroup = dimensions
-    place(master.textEdit, caption, 22, -41)
-    master.textEdit:SetPoint("TOPRIGHT", caption, "TOPRIGHT", -22, -41)
-    place(master.emptyCaption, caption, 18, -78)
-    place(master.moveButton, position, 18, -32)
-    place(master.moveHelp, position, 18, -68)
-    master.moveHelp:SetPoint("TOPRIGHT", position, "TOPRIGHT", -18, -68)
+    place(master.modernScaleControl, bar, 22, -335)
+    master.modernScaleControl:SetPoint("TOPRIGHT", bar, "TOPRIGHT", -22, -335)
+    place(master.moveButton, bar, 18, -494)
+    place(master.moveHelp, bar, 18, -530)
+    master.moveHelp:SetPoint("TOPRIGHT", bar, "TOPRIGHT", -18, -530)
     panel.bindingHeaders = {}
     for slot = 1, 2 do
         local header = label(bindings, 0, 0, 160, "GameFontNormalSmall")
         header:ClearAllPoints()
         panel.bindingHeaders[slot] = header
     end
-    for index, row in ipairs({{panel.hotkey, panel.hotkey2}, {panel.focusHotkey, panel.focusHotkey2}, {panel.itemTreeHotkey, panel.itemTreeHotkey2}}) do
+    for index, row in ipairs({
+        {panel.hotkey, panel.hotkey2}, {panel.focusHotkey, panel.focusHotkey2},
+        {panel.itemTreeHotkey, panel.itemTreeHotkey2}, {panel.rareScannerHotkey, panel.rareScannerHotkey2},
+    }) do
         local y = -58 - (index - 1) * 38
         for _, control in ipairs(row) do
             control:SetParent(bindings)
@@ -830,9 +833,12 @@ function UI.LayoutSettings(app)
     panel.itemTreeHotkeyAction = label(bindings, 18, -139, 210, "GameFontHighlight")
     panel.itemTreeHotkeyAction:SetText(L("itemTreeBinding"))
     panel.itemTreeHotkeyAction:SetPoint("TOPRIGHT", panel.itemTreeHotkey, "TOPLEFT", -12, -5)
-    place(panel.hotkeyNote, bindings, 18, -176)
+    panel.rareScannerHotkeyAction = label(bindings, 18, -177, 210, "GameFontHighlight")
+    panel.rareScannerHotkeyAction:SetText(L("rareScannerBinding"))
+    panel.rareScannerHotkeyAction:SetPoint("TOPRIGHT", panel.rareScannerHotkey, "TOPLEFT", -12, -5)
+    place(panel.hotkeyNote, bindings, 18, -214)
     panel.hotkeyNote:SetWidth(450)
-    panel.hotkeyNote:SetPoint("TOPRIGHT", bindings, "TOPRIGHT", -18, -176)
+    panel.hotkeyNote:SetPoint("TOPRIGHT", bindings, "TOPRIGHT", -18, -214)
     panel.pages[4].scroll:SetScript("OnHide", function()
         stopBindingCapture()
         UI.UpdateSettings(app)
@@ -854,51 +860,6 @@ function UI.LayoutSettings(app)
     resize(panel)
     UI.UpdateMasterSettings(app)
     UI.SelectSettingsTab(1)
-end
-
-QuestTargetsCaptionSettingMixin = {}
-
-function QuestTargetsCaptionSettingMixin:OnLoad()
-    SettingsListElementMixin.OnLoad(self)
-    local edit = CreateFrame("EditBox", nil, self, "InputBoxTemplate")
-    self.EditBox = edit
-    edit:SetSize(200, 22)
-    edit:SetPoint("LEFT", self, "CENTER", -40, 0)
-    edit:SetAutoFocus(false)
-    edit:SetMaxLetters(48)
-    edit:SetScript("OnEnterPressed", function(input) input:ClearFocus() end)
-    edit:SetScript("OnEscapePressed", function(input)
-        if self.data then input:SetText(self.data.get()) end
-        input:ClearFocus()
-    end)
-    edit:SetScript("OnEditFocusLost", function(input)
-        if not self.data then return end
-        if self.data.enabled and not self.data.enabled() then
-            input:SetText(self.data.get())
-            return
-        end
-        local value = NS.Core.Clean(input:GetText())
-        if value ~= self.data.get() then self.data.set(value) end
-        input:SetText(self.data.get())
-    end)
-end
-
-function QuestTargetsCaptionSettingMixin:Init(initializer)
-    SettingsListElementMixin.Init(self, initializer)
-    self.Text:SetText(initializer.data.name)
-    self.EditBox:SetText(initializer.data.get())
-    self:EvaluateState()
-end
-
-function QuestTargetsCaptionSettingMixin:EvaluateState()
-    local enabled = not self.data.enabled or self.data.enabled()
-    self.EditBox:SetEnabled(enabled)
-    self.Text:SetAlpha(enabled and 1 or 0.5)
-end
-
-function QuestTargetsCaptionSettingMixin:Release()
-    self.EditBox:ClearFocus()
-    SettingsListElementMixin.Release(self)
 end
 
 QuestTargetsMoveSettingMixin = {}
@@ -995,9 +956,12 @@ function QuestTargetsBindingSettingMixin:Release()
 end
 
 local function nativeSettings(app)
-    -- The native sidebar and heading share GetName(). Keep registration plain;
-    -- change only our displayed heading after Blizzard selects the category.
-    if SettingsPanel and SettingsPanel.DisplayCategory and UI.versionHeaderPanel ~= SettingsPanel then
+    local interface = GetBuildInfo and select(4, GetBuildInfo())
+    local forever = type(interface) == "number" and interface >= 16000 and interface < 17000
+    local privateList = forever and SettingsListMixin and CreateVerticalLayout
+        and Settings.RegisterCanvasLayoutCategory and Settings.RegisterCanvasLayoutSubcategory
+        and Settings.CreateCheckboxInitializer and Settings.CreateSliderInitializer and Settings.CreateDropdownInitializer
+    if not forever and SettingsPanel and SettingsPanel.DisplayCategory and UI.versionHeaderPanel ~= SettingsPanel then
         UI.versionHeaderPanel = SettingsPanel
         hooksecurefunc(SettingsPanel, "DisplayCategory", function(panel, selected)
             if not UI.nativeCategory or selected ~= UI.nativeCategory then return end
@@ -1009,19 +973,48 @@ local function nativeSettings(app)
     end
     if UI.nativeCategory then return end
 
-    local category, layout = Settings.RegisterVerticalLayoutCategory(L("title"))
+    local function privatePage(parent, key)
+        -- Use the same template as SettingsPanel. A registered canvas keeps
+        -- this private list's initializers out of the shared results layout.
+        local page = CreateFrame("Frame", nil, nil, "SettingsListTemplate")
+        page:Hide()
+        local name = L(key)
+        local category
+        if parent then category = Settings.RegisterCanvasLayoutSubcategory(parent, page, name)
+        else category = Settings.RegisterCanvasLayoutCategory(page, name) end
+        local layout = CreateVerticalLayout()
+        local function updateTitle()
+            page.Header.Title:SetText(parent and L(key) or UI.OptionsTitle())
+        end
+        page.Header.DefaultsButton.Text:SetText(SETTINGS_DEFAULTS)
+        page.Header.DefaultsButton:SetScript("OnClick", function()
+            StaticPopup_Show("GAME_SETTINGS_APPLY_DEFAULTS")
+        end)
+        page:SetScript("OnShow", function()
+            updateTitle()
+            page:Display(layout:GetInitializers())
+        end)
+        page:SetScript("OnHide", stopBindingCapture)
+        return category, layout, page, updateTitle
+    end
+
+    local category, layout, page, updateTitle
+    if privateList then category, layout, page, updateTitle = privatePage(nil, "title")
+    else category, layout = Settings.RegisterVerticalLayoutCategory(L("title")) end
+    local activeCategory, activeLayout = category, layout
+    local buttonsPage, buttonsLayout, updateButtonsTitle
     UI.nativeHeaders = {}
     UI.nativeButtons = {}
     local function section(key)
         local initializer = CreateSettingsListSectionHeaderInitializer(L(key))
-        layout:AddInitializer(initializer)
+        activeLayout:AddInitializer(initializer)
         UI.nativeHeaders[#UI.nativeHeaders + 1] = {initializer=initializer, key=key}
     end
     local function setting(key, kind, default, get, set)
         -- Forever validates name callbacks outside securecallfunction before
         -- inserting the setting into the registry also read by ActionBar clicks.
         -- Keep registration data plain; localize only our displayed row below.
-        return Settings.RegisterProxySetting(category, "QUESTTARGETS_" .. key,
+        return Settings.RegisterProxySetting(activeCategory, "QUESTTARGETS_" .. key,
             Settings.VarType[kind], L(key), default, get, set)
     end
     local function localizedRow(initializer, key)
@@ -1029,8 +1022,16 @@ local function nativeSettings(app)
         return initializer
     end
     local function checkboxSetting(key, default, get, set, descriptionKey)
-        return localizedRow(Settings.CreateCheckbox(category, setting(key, "Boolean", default, get, set),
-            descriptionKey and L(descriptionKey) or nil), key)
+        local value = setting(key, "Boolean", default, get, set)
+        local description = descriptionKey and L(descriptionKey)
+        local initializer
+        if privateList then
+            initializer = Settings.CreateCheckboxInitializer(value, nil, description)
+            activeLayout:AddInitializer(initializer)
+        else
+            initializer = Settings.CreateCheckbox(activeCategory, value, description)
+        end
+        return localizedRow(initializer, key)
     end
     local function sliderSetting(key, savedKey, minimum, maximum, step, pixels, defaultValue)
         local value = setting(key, "Number", defaultValue or (pixels and 35 or 1),
@@ -1043,15 +1044,29 @@ local function nativeSettings(app)
         options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right,
             function(number) return pixels and string.format("%d px", number)
                 or string.format("%d%%", math.floor(number * 100 + 0.5)) end)
-        return localizedRow(Settings.CreateSlider(category, value, options), key)
+        local initializer
+        if privateList then
+            initializer = Settings.CreateSliderInitializer(value, options)
+            activeLayout:AddInitializer(initializer)
+        else
+            initializer = Settings.CreateSlider(activeCategory, value, options)
+        end
+        return localizedRow(initializer, key)
     end
     local function dropdownSetting(key, default, get, set, choices)
         local value = setting(key, "Number", default, get, set)
-        local initializer = Settings.CreateDropdown(category, value, function()
+        local function menuOptions()
             local options = Settings.CreateControlTextContainer()
             for index, text in ipairs(choices()) do options:Add(index, text) end
             return options:GetData()
-        end)
+        end
+        local initializer
+        if privateList then
+            initializer = Settings.CreateDropdownInitializer(value, menuOptions)
+            activeLayout:AddInitializer(initializer)
+        else
+            initializer = Settings.CreateDropdown(activeCategory, value, menuOptions)
+        end
         localizedRow(initializer, key)
         return value, initializer
     end
@@ -1060,11 +1075,22 @@ local function nativeSettings(app)
             local row = entry.initializer.row
             if row then row:RefreshBindings() end
         end
-        -- Use the native attribute delegate, never the shared panel's method.
-        if SettingsInbound and SettingsInbound.RepairDisplay then SettingsInbound.RepairDisplay() end
+        if privateList then
+            updateTitle()
+            updateButtonsTitle()
+            if page:IsVisible() then page:RepairDisplay(layout) end
+            if buttonsPage:IsVisible() then buttonsPage:RepairDisplay(buttonsLayout) end
+        elseif SettingsInbound and SettingsInbound.RepairDisplay then
+            SettingsInbound.RepairDisplay()
+        end
     end
 
     section("display")
+    UI.nativePatchNotes = Settings.CreateElementInitializer("QuestTargetsMoveSettingTemplate", {
+        name = L("patchNotes"), buttonText = L("patchNotesOpen"), help = L("patchNotesHelp"),
+        callback = NS.PatchNotes.Open,
+    })
+    layout:AddInitializer(UI.nativePatchNotes)
     checkboxSetting("showMenu", true, function()
         if app.pendingVisibility ~= nil then return app.pendingVisibility end
         return not app.db.hidden
@@ -1092,6 +1118,14 @@ local function nativeSettings(app)
     checkboxSetting("muteDeadTargetSound", false, function() return app.db.muteDeadTargetSound end,
         function(value) app.db.muteDeadTargetSound = value end, "muteDeadTargetSoundTip")
 
+    if privateList then
+        activeCategory, activeLayout, buttonsPage, updateButtonsTitle = privatePage(category, "buttons")
+        buttonsLayout = activeLayout
+        UI.nativeButtonsCategory = activeCategory
+    elseif Settings.RegisterVerticalLayoutSubcategory then
+        activeCategory, activeLayout = Settings.RegisterVerticalLayoutSubcategory(category, L("buttons"))
+        UI.nativeButtonsCategory = activeCategory
+    end
     section("buttons")
     checkboxSetting("showTooltips", false, function() return app.db.showTooltips end,
         function(value) app.db.showTooltips = value end)
@@ -1110,6 +1144,7 @@ local function nativeSettings(app)
     questieToggle:AddModifyPredicate(function() return addonLoaded("Questie") end)
     local questieOffset = sliderSetting("questieTrackerOffset", "questieTrackerOffset", -240, 240, 1, true)
     questieOffset:SetParentInitializer(questieToggle)
+    if privateList then questieOffset.IsParentInitializerInLayout = function() return true end end
     questieOffset:AddModifyPredicate(function()
         return addonLoaded("Questie") and app.db.questieTrackerButtons
     end)
@@ -1125,10 +1160,12 @@ local function nativeSettings(app)
 
     local ellesmereOffset = sliderSetting("ellesmereTrackerOffset", "ellesmereTrackerOffset", -240, 240, 1, true, 0)
     ellesmereOffset:SetParentInitializer(ellesmereToggle)
+    if privateList then ellesmereOffset.IsParentInitializerInLayout = questieOffset.IsParentInitializerInLayout end
     ellesmereOffset:AddModifyPredicate(function()
         return NS.EllesmereTracker.Available() and app.db.ellesmereTrackerButtons ~= false
     end)
 
+    section("targetBar")
     checkboxSetting("showMaster", true, function() return not app.db.masterHidden end,
         function(value) app.db.masterHidden = not value; app:Schedule() end, "masterMoveTip")
     local restedXPToggle = checkboxSetting("restedXPIntegration", false,
@@ -1157,52 +1194,51 @@ local function nativeSettings(app)
             NS.ItemTree.Sync(app)
         end)
     itemTreeToggle:AddModifyPredicate(function() return addonLoaded("ItemTree") end)
-
-    local _, appearance = dropdownSetting("masterAppearance", 2,
-        function() return app.db.masterAppearance == "modern" and 2 or 1 end,
+    local rareScannerToggle = checkboxSetting("showRareScannerButton", true,
+        function() return app.db.rareScannerButton ~= false end,
         function(value)
-            app.db.masterAppearance = value == 2 and "modern" or "classic"
-            app:Schedule()
-            refresh()
-        end,
-        function() return {L("masterClassic"), L("masterModern")} end)
-    local width = sliderSetting("widthLabel", "masterScaleX", 0.3, 2, 0.01)
-    local height = sliderSetting("heightLabel", "masterScaleY", 0.3, 2, 0.01)
-    local modernScale = sliderSetting("scaleFactor", "masterModernScale", 0.3, 2, 0.01)
-    width:SetParentInitializer(appearance)
-    height:SetParentInitializer(appearance)
-    modernScale:SetParentInitializer(appearance)
-    -- Shown predicates also run in Blizzard's unwrapped global Settings search.
-    -- Modify predicates only disable controls during the secure row setup.
-    width:AddModifyPredicate(function() return app.db.masterAppearance ~= "modern" end)
-    height:AddModifyPredicate(function() return app.db.masterAppearance ~= "modern" end)
-    modernScale:AddModifyPredicate(function() return app.db.masterAppearance == "modern" end)
+            if InCombatLockdown() or not NS.RareScanner.MarkingAvailable() then return end
+            app.db.rareScannerButton = value
+            NS.RareScanner.SyncMark(app)
+        end, "rareScannerButtonTip")
+    rareScannerToggle:AddModifyPredicate(NS.RareScanner.MarkingAvailable)
+    local rareScannerZoneToggle = checkboxSetting("rareScannerZone", false,
+        function() return app.db.rareScannerZone == true end,
+        function(value)
+            if InCombatLockdown() or not NS.RareScanner.ZoneAvailable() then return end
+            app.db.rareScannerZone = value
+            NS.RareScanner.SyncMark(app)
+        end, "rareScannerZoneTip")
+    rareScannerZoneToggle:AddModifyPredicate(NS.RareScanner.ZoneAvailable)
 
-    local caption = Settings.CreateElementInitializer("QuestTargetsCaptionSettingTemplate", {
-        name = L("caption"),
-        enabled = function() return app.db.masterAppearance ~= "modern" end,
-        get = function() return app.db.masterText or "" end,
-        set = function(value)
-            app.db.masterText = NS.Core.Clean(value)
+    dropdownSetting("masterOrientation", 1,
+        function() return app.db.masterOrientation == "vertical" and 2 or 1 end,
+        function(value)
+            app.db.masterOrientation = value == 2 and "vertical" or "horizontal"
             app:Schedule()
         end,
-    })
-    layout:AddInitializer(caption)
-    UI.nativeCaption = caption
-    caption:SetParentInitializer(appearance)
+        function() return {L("masterHorizontal"), L("masterVertical")} end)
+    sliderSetting("masterSpacing", "masterSpacing", 0, 32, 1, true, 4)
+    checkboxSetting("masterBorder", false, function() return app.db.masterBorder end,
+        function(value) app.db.masterBorder = value; app:Schedule() end)
+    checkboxSetting("masterDividers", false, function() return app.db.masterDividers end,
+        function(value) app.db.masterDividers = value; app:Schedule() end)
+
+    sliderSetting("buttonSize", "masterModernScale", 0.3, 2, 0.01)
 
     UI.nativeMove = Settings.CreateElementInitializer("QuestTargetsMoveSettingTemplate", {
         name = L("masterMove"), buttonText = L("masterMoveStart"), help = L("masterMoveHelp"),
         callback = function() UI.BeginMasterMove(app) end,
     })
-    layout:AddInitializer(UI.nativeMove)
+    activeLayout:AddInitializer(UI.nativeMove)
 
+    activeCategory, activeLayout = category, layout
     section("hotkeys")
     local function bindingRow(key, focused, descriptionKey)
         local command = bindingAction(focused)
         local initializer
         local function isEnabled()
-            return focused ~= "itemTree" or addonLoaded("ItemTree")
+            return bindingAvailable(focused)
         end
         local function text(slot)
             local first, second = GetBindingKey(command)
@@ -1227,12 +1263,11 @@ local function nativeSettings(app)
     bindingRow("masterDefault", false)
     bindingRow("focusHotkey", true, "focusHotkeyTip")
     bindingRow("itemTreeBinding", "itemTree")
+    bindingRow("rareScannerBinding", "rareScanner")
     section("language")
     dropdownSetting("language", NS.Language(), NS.Language, function(value)
         if InCombatLockdown() or value == NS.Language() then return end
-        local oldDefault = L("masterDefault")
         app.db.language = NS.LANGUAGES[value]
-        if app.db.masterText == oldDefault then app.db.masterText = L("masterDefault") end
         UI.ApplyLanguage(app)
         category:SetName(L("title"))
         for _, header in ipairs(UI.nativeHeaders) do header.initializer.data.name = L(header.key) end
@@ -1242,7 +1277,9 @@ local function nativeSettings(app)
                 button.initializer.data.tooltip = L(button.descriptionKey)
             end
         end
-        UI.nativeCaption.data.name = L("caption")
+        UI.nativePatchNotes.data.name = L("patchNotes")
+        UI.nativePatchNotes.data.buttonText = L("patchNotesOpen")
+        UI.nativePatchNotes.data.help = L("patchNotesHelp")
         refresh()
     end, function() return NS.LANGUAGE_NAMES end)
 
@@ -1266,6 +1303,8 @@ function UI.RegisterSettings(app)
         panel:SetSize(600, 690)
         panel.titleText = label(panel, 20, -18, 540, "GameFontNormalLarge")
         panel.titleText:SetText(UI.OptionsTitle())
+        panel.patchNotesButton = button(panel, L("patchNotes"), 142, NS.PatchNotes.Open)
+        panel.patchNotesButton:SetPoint("TOPRIGHT", -20, -14)
         panel.toggle = checkbox(panel, L("autoMark"), function()
             app.db.autoMark = not app.db.autoMark
             UI.UpdateSettings(app)
@@ -1387,15 +1426,27 @@ function UI.RegisterSettings(app)
             NS.ItemTree.Sync(app)
             UI.UpdateSettings(app)
         end)
+        panel.rareScannerToggle = checkbox(panel, L("showRareScannerButton"), function()
+            if InCombatLockdown() or not NS.RareScanner.MarkingAvailable() then return end
+            app.db.rareScannerButton = app.db.rareScannerButton == false
+            NS.RareScanner.SyncMark(app)
+            UI.UpdateSettings(app)
+        end)
+        panel.rareScannerZoneToggle = checkbox(panel, L("rareScannerZone"), function()
+            if InCombatLockdown() or not NS.RareScanner.ZoneAvailable() then return end
+            app.db.rareScannerZone = not app.db.rareScannerZone
+            NS.RareScanner.SyncMark(app)
+            UI.UpdateSettings(app)
+        end)
         panel.hotkeysText = label(panel, 20, -472, 330, "GameFontNormal")
         panel.hotkeysText:SetText(L("hotkeys"))
         local function bindingButton(focused, slot)
             local control = CreateFrame("Button", nil, panel, "UIMenuButtonStretchTemplate")
             control:SetSize(160, 22)
             control:SetNormalFontObject("GameFontHighlightSmall")
-            if focused == "itemTree" then control:SetDisabledFontObject("GameFontDisableSmall") end
+            control:SetDisabledFontObject("GameFontDisableSmall")
             control:SetScript("OnClick", function(self)
-                if focused == "itemTree" and not addonLoaded("ItemTree") then return end
+                if not bindingAvailable(focused) then return end
                 beginBindingCapture(self, app, focused, slot, function() UI.UpdateSettings(app) end)
             end)
             if focused == true then
@@ -1415,6 +1466,8 @@ function UI.RegisterSettings(app)
         panel.focusHotkey2 = bindingButton(true, 2)
         panel.itemTreeHotkey = bindingButton("itemTree", 1)
         panel.itemTreeHotkey2 = bindingButton("itemTree", 2)
+        panel.rareScannerHotkey = bindingButton("rareScanner", 1)
+        panel.rareScannerHotkey2 = bindingButton("rareScanner", 2)
         panel:SetScript("OnHide", stopBindingCapture)
         panel.hotkeyNote = label(panel, 20, -532, 520)
         panel.hotkeyNote:SetText(L("hotkeyNote"))
@@ -1432,9 +1485,7 @@ function UI.RegisterSettings(app)
                 info.checked = NS.Language() == index
                 info.func = function()
                     if InCombatLockdown() or language == app.db.language then return end
-                    local oldDefault = L("masterDefault")
                     app.db.language = language
-                    if app.db.masterText == oldDefault then app.db.masterText = L("masterDefault") end
                     UI.ApplyLanguage(app)
                 end
                 UIDropDownMenu_AddButton(info)
@@ -1468,51 +1519,37 @@ end
 function UI.CreateMasterSettings(app, category)
     local panel = CreateFrame("Frame", "QuestTargetsMasterSettings", category)
     UI.masterSettings = panel
-    panel:SetSize(600, 470)
-    panel.titleText = label(panel, 20, -18, 540, "GameFontNormalLarge")
-    panel.titleText:SetText(L("master"))
-    panel.appearanceText = label(panel, 20, -50, 540, "GameFontNormal")
-    panel.classicButton = button(panel, L("masterClassic"), 120, function()
-        app.db.masterAppearance = "classic"
+    panel.orientationLabel = label(panel, 0, 0, 160, "GameFontNormal")
+    panel.orientationDropdown = CreateFrame("Frame", "QuestTargetsOrientationDropdown", panel, "UIDropDownMenuTemplate")
+    UIDropDownMenu_SetWidth(panel.orientationDropdown, 140)
+    UIDropDownMenu_Initialize(panel.orientationDropdown, function()
+        for index, orientation in ipairs({"horizontal", "vertical"}) do
+            local choice = orientation
+            local info = UIDropDownMenu_CreateInfo()
+            info.text = L(index == 1 and "masterHorizontal" or "masterVertical")
+            info.checked = app.db.masterOrientation == choice
+            info.func = function()
+                app.db.masterOrientation = choice
+                UI.UpdateMasterSettings(app)
+                app:Schedule()
+            end
+            UIDropDownMenu_AddButton(info)
+        end
+    end)
+    panel.spacingControl = settingsSlider(panel, "QuestTargetsButtonSpacingSlider", "masterSpacing", 0, 32, 1, app)
+    panel.borderToggle = checkbox(panel, L("masterBorder"), function()
+        app.db.masterBorder = not app.db.masterBorder
         UI.UpdateMasterSettings(app)
         app:Schedule()
     end)
-    panel.classicButton:SetPoint("TOPLEFT", 20, -74)
-    panel.modernButton = button(panel, L("masterModern"), 120, function()
-        app.db.masterAppearance = "modern"
+    panel.dividersToggle = checkbox(panel, L("masterDividers"), function()
+        app.db.masterDividers = not app.db.masterDividers
         UI.UpdateMasterSettings(app)
         app:Schedule()
     end)
-    panel.modernButton:SetPoint("TOPLEFT", 150, -74)
-    panel.sizeNote = label(panel, 20, -111, 540)
-    panel.sizeNote:SetText(L("sizeNote"))
 
-    panel.widthControl = settingsSlider(panel, "QuestTargetsMasterWidthSlider", "masterScaleX", 0.3, 2, 0.01, app)
-    panel.heightControl = settingsSlider(panel, "QuestTargetsMasterHeightSlider", "masterScaleY", 0.3, 2, 0.01, app)
     panel.modernScaleControl = settingsSlider(panel, "QuestTargetsMasterScaleSlider", "masterModernScale", 0.3, 2, 0.01, app)
 
-    panel.captionText = label(panel, 20, -246, 540, "GameFontNormal")
-    panel.captionText:SetText(L("caption"))
-    panel.textEdit = CreateFrame("EditBox", nil, panel, "InputBoxTemplate")
-    panel.textEdit:SetSize(335, 24)
-    panel.textEdit:SetPoint("TOPLEFT", 20, -274)
-    panel.textEdit:SetAutoFocus(false)
-    panel.textEdit:SetMaxLetters(48)
-    local function saveText(self)
-        local value = NS.Core.Clean(self:GetText())
-        app.db.masterText = value
-        self:ClearFocus()
-        UI.UpdateMasterSettings(app)
-        app:Schedule()
-    end
-    panel.textEdit:SetScript("OnEnterPressed", saveText)
-    panel.textEdit:SetScript("OnEditFocusLost", saveText)
-    panel.textEdit:SetScript("OnEscapePressed", function(self)
-        self:SetText(app.db.masterText)
-        self:ClearFocus()
-    end)
-    panel.emptyCaption = label(panel, 20, -314, 540)
-    panel.emptyCaption:SetText(L("emptyCaption"))
     panel.moveButton = button(panel, L("masterMove"), 260, function() UI.BeginMasterMove(app) end)
     panel.moveHelp = label(panel, 20, -390, 500)
     panel.moveHelp:SetHeight(54)
@@ -1523,31 +1560,17 @@ end
 function UI.UpdateMasterSettings(app)
     local panel = UI.masterSettings
     if not panel then return end
-    local modern = app.db.masterAppearance == "modern"
-    panel.appearanceText:SetText(L("masterAppearance"))
-    panel.classicButton:SetEnabled(modern)
-    panel.modernButton:SetEnabled(not modern)
-    panel.widthControl:SetShown(not modern)
-    panel.heightControl:SetShown(not modern)
-    panel.modernScaleControl:SetShown(modern)
-    if panel.captionGroup then panel.captionGroup:SetShown(not modern) end
-    if panel.dimensionsGroup then
-        panel.dimensionsGroup:SetHeight(modern and 130 or 220)
-        panel.positionGroup:ClearAllPoints()
-        local y = modern and -314 or -550
-        panel.positionGroup:SetPoint("TOPLEFT", 8, y)
-        panel.positionGroup:SetPoint("TOPRIGHT", -8, y)
-        panel:SetHeight(modern and 474 or 710)
-    end
-    panel.textEdit:SetShown(not modern)
-    panel.emptyCaption:SetShown(not modern)
-    panel.widthControl.caption:SetText(L("widthLabel"))
-    panel.heightControl.caption:SetText(L("heightLabel"))
-    panel.modernScaleControl.caption:SetText(L("scaleFactor"))
-    panel.widthControl:Refresh()
-    panel.heightControl:Refresh()
+    local vertical = app.db.masterOrientation == "vertical"
+    panel.orientationLabel:SetText(L("masterOrientation"))
+    UIDropDownMenu_SetText(panel.orientationDropdown, L(vertical and "masterVertical" or "masterHorizontal"))
+    panel.spacingControl.caption:SetText(L("masterSpacing") .. " (px)")
+    panel.spacingControl:Refresh()
+    panel.borderToggle.caption:SetText(L("masterBorder"))
+    panel.borderToggle:SetChecked(app.db.masterBorder)
+    panel.dividersToggle.caption:SetText(L("masterDividers"))
+    panel.dividersToggle:SetChecked(app.db.masterDividers)
+    panel.modernScaleControl.caption:SetText(L("buttonSize"))
     panel.modernScaleControl:Refresh()
-    if not panel.textEdit:HasFocus() then panel.textEdit:SetText(app.db.masterText) end
 end
 
 function UI.UpdateSettings(app)
@@ -1600,6 +1623,16 @@ function UI.UpdateSettings(app)
     if not UI.settings.focusHotkey2.listening then UI.settings.focusHotkey2:SetText(bindingText(second)) end
     local itemTreeAvailable = addonLoaded("ItemTree")
     UI.settings.itemTreeToggle:SetChecked(app.db.itemTreeButton == true)
+    UI.settings.rareScannerToggle:SetChecked(app.db.rareScannerButton ~= false)
+    local rareScannerAvailable = NS.RareScanner.MarkingAvailable()
+    UI.settings.rareScannerToggle:SetEnabled(rareScannerAvailable)
+    local rareGray = rareScannerAvailable and 1 or 0.5
+    UI.settings.rareScannerToggle.caption:SetTextColor(rareGray, rareGray, rareGray)
+    UI.settings.rareScannerZoneToggle:SetChecked(app.db.rareScannerZone == true)
+    local zoneAvailable = NS.RareScanner.ZoneAvailable()
+    UI.settings.rareScannerZoneToggle:SetEnabled(not not zoneAvailable)
+    rareGray = zoneAvailable and 1 or 0.5
+    UI.settings.rareScannerZoneToggle.caption:SetTextColor(rareGray, rareGray, rareGray)
     UI.settings.itemTreeToggle:SetEnabled(itemTreeAvailable)
     UI.settings.itemTreeHotkey:SetEnabled(itemTreeAvailable)
     UI.settings.itemTreeHotkey2:SetEnabled(itemTreeAvailable)
@@ -1609,6 +1642,13 @@ function UI.UpdateSettings(app)
     first, second = GetBindingKey(ITEMTREE_BINDING)
     if not UI.settings.itemTreeHotkey.listening then UI.settings.itemTreeHotkey:SetText(bindingText(first)) end
     if not UI.settings.itemTreeHotkey2.listening then UI.settings.itemTreeHotkey2:SetText(bindingText(second)) end
+    UI.settings.rareScannerHotkey:SetEnabled(rareScannerAvailable)
+    UI.settings.rareScannerHotkey2:SetEnabled(rareScannerAvailable)
+    rareGray = rareScannerAvailable and 1 or 0.5
+    UI.settings.rareScannerHotkeyAction:SetTextColor(rareGray, rareGray, rareGray)
+    first, second = GetBindingKey(RARESCANNER_BINDING)
+    if not UI.settings.rareScannerHotkey.listening then UI.settings.rareScannerHotkey:SetText(bindingText(first)) end
+    if not UI.settings.rareScannerHotkey2.listening then UI.settings.rareScannerHotkey2:SetText(bindingText(second)) end
     UIDropDownMenu_SetSelectedID(UI.settings.languageDropdown, NS.Language())
     UIDropDownMenu_SetText(UI.settings.languageDropdown, NS.LANGUAGE_NAMES[NS.Language()])
     for index, choice in ipairs(UI.settings.icons) do choice:SetEnabled(index ~= app.db.markerIcon) end
@@ -1616,9 +1656,11 @@ end
 
 function UI.ApplyLanguage(app)
     NS.UpdateBindingLabels()
+    if UI.nativeButtonsCategory then UI.nativeButtonsCategory:SetName(L("buttons")) end
     -- Forever may not preserve newly written SavedVariables across /reload.
     -- Refresh existing native controls immediately instead of reloading the UI.
     if InCombatLockdown() then return end
+    NS.PatchNotes.RefreshLanguage()
     if UI.frame then
         UI.frame.TitleContainer.TitleText:SetText(L("title"))
         UI.settingsButton:SetText(L("settings"))
@@ -1627,12 +1669,14 @@ function UI.ApplyLanguage(app)
     local panel = UI.settings
     if panel then
         panel.titleText:SetText(UI.OptionsTitle())
+        panel.patchNotesButton:SetText(L("patchNotes"))
         if panel.tabs then
             for _, tab in ipairs(panel.tabs) do tab:SetText(L(tab.localeKey)) end
             for _, group in ipairs(panel.groups) do group.heading:SetText(L(group.localeKey)) end
             panel.hotkeyAction:SetText(L("masterDefault"))
             panel.focusHotkeyAction:SetText(L("focusHotkey"))
             panel.itemTreeHotkeyAction:SetText(L("itemTreeBinding"))
+            panel.rareScannerHotkeyAction:SetText(L("rareScannerBinding"))
             for slot, header in ipairs(panel.bindingHeaders) do
                 header:SetText(L(slot == 1 and "bindingKey1" or "bindingKey2"))
             end
@@ -1653,6 +1697,8 @@ function UI.ApplyLanguage(app)
         panel.restedXPToggle.caption:SetText(L("restedXPIntegration"))
         panel.polestarToggle.caption:SetText(L("polestarIntegration"))
         panel.itemTreeToggle.caption:SetText(L("showItemTreeButton"))
+        panel.rareScannerToggle.caption:SetText(L("showRareScannerButton"))
+        panel.rareScannerZoneToggle.caption:SetText(L("rareScannerZone"))
         panel.hotkeyNote:SetText(L("hotkeyNote"))
         panel.hotkeysText:SetText(L("hotkeys"))
         panel.languageText:SetText(L("language"))
@@ -1663,12 +1709,6 @@ function UI.ApplyLanguage(app)
         UI.UpdateSettings(app)
     end
     if UI.masterSettings then
-        UI.masterSettings.titleText:SetText(L("master"))
-        UI.masterSettings.classicButton:SetText(L("masterClassic"))
-        UI.masterSettings.modernButton:SetText(L("masterModern"))
-        UI.masterSettings.sizeNote:SetText(L("sizeNote"))
-        UI.masterSettings.captionText:SetText(L("caption"))
-        UI.masterSettings.emptyCaption:SetText(L("emptyCaption"))
         UI.masterSettings.moveButton:SetText(L("masterMove"))
         UI.masterSettings.moveHelp:SetText(L("masterMoveHelp"))
         UI.UpdateMasterSettings(app)

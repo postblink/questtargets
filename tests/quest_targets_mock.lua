@@ -31,6 +31,10 @@ function methods:SetParent(parent)
 end
 function methods:SetBackdrop(value) self.backdrop = value end
 function methods:SetBackdropColor(...) self.backdropColor = {...} end
+function methods:SetBackdropBorderColor(...) self.borderColor = {...} end
+function methods:SetVerticalScroll(value) self.verticalScroll = value end
+function methods:SetSpacing(value) self.spacing = value end
+function methods:GetStringHeight() return 14 * math.max(1, select(2, (self.text or ""):gsub("\n", "\n")) + 1) end
 function methods:SetNormalFontObject(value) self.normalFont = value end
 function methods:SetDisabledFontObject(value) self.disabledFont = value end
 function methods:SetScrollChild(child) self.scrollChild = child end
@@ -135,6 +139,8 @@ function methods:SetTexture(texture)
     assert(texture and (texture:match('^Interface\\TargetingFrame\\UI%-RaidTargetingIcon_[1-8]$')
         or texture:match('^Interface\\Buttons\\UI%-Panel%-Button%-')
         or texture:match('^Interface\\Common\\dark%-goldframe%-button')
+        or texture == 'Interface\\AddOns\\QuestTargets\\Textures\\RarePulse'
+        or texture == 'Interface\\AddOns\\QuestTargets\\Textures\\TargetBarDivider'
         or texture == 'Interface\\Minimap\\MiniMap-TrackingBorder'
         or texture == 'Interface\\WorldMap\\UI-QuestPoi-NumberIcons'
         or texture == 'Interface\\AddOns\\QuestTargets\\Textures\\FeedbackQR'))
@@ -258,9 +264,20 @@ function CreateFrame(kind, name, parent, template)
         end
         local p = f
         while p and p ~= UIParent do p.protected = true; p = p.parent end
+    elseif template == "SecureHandlerStateTemplate" then
+        f.protected = true
     elseif template == "DefaultPanelFlatTemplate" then
         f.TitleContainer = create(f); f.TitleContainer.TitleText = create(f.TitleContainer)
         f.NineSlice = create(f); f.Bg = create(f)
+    elseif template == "InsetFrameTemplate" then
+        f.NineSlice = create(f)
+    elseif template == "MinimalScrollBar" then
+        f.RegisterCallback = function(self, _, callback, owner)
+            self.scrollCallback = function(position) callback(owner, position) end
+        end
+        f.SetScrollPercentage = function(self, value) self.percentage = value end
+        f.SetVisibleExtentPercentage = function(self, value) self.extent = value end
+        f.SetPanExtentPercentage = function(self, value) self.pan = value end
     elseif template == "UIPanelScrollBarTemplate" then
         -- Blizzard's inherited handler expects a ScrollFrame parent. This addon
         -- owns the slider value itself and must replace that handler first.
@@ -412,7 +429,7 @@ function LibStub(name)
 end
 
 -- Most legacy layout tests exercise an existing classic appearance profile.
-QuestTargetsDB={masterAppearance="classic"}
+QuestTargetsDB={}
 
 function methods:SetResizable(value) guard(self); self.resizable=value end
 function methods:SetResizeBounds(...) guard(self); self.resizeBounds={...} end

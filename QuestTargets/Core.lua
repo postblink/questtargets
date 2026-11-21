@@ -220,6 +220,8 @@ function Core.ClickMacro(entry, entries, settings, state, preserveEntry)
     Core.lastCycle = nil
     Core.lastClick = {path = "Keine Mobnamen", combat = InCombatLockdown()}
     if not entry or not entry.name then return end
+    local proximity = NS.Proximity
+    if proximity and not Core.lastClick.combat then proximity.Sample() end
     -- Prefer a concrete visible quest unit on the first click. If no valid
     -- nameplate token exists, fall back to name search for distant targets.
     local validCurrent = Core.ValidCurrentTarget(entry)
@@ -250,11 +252,15 @@ function Core.ClickMacro(entry, entries, settings, state, preserveEntry)
         return Core.MarkerMacro(settings, true, friendlyCurrent)
     end
     if not validCurrent and not unit then
-        if NS.Proximity then
-            NS.Proximity.Order(entry)
-            if state and state.proximityKey ~= entry.proximityKey then
-                state.fallbackIndex, state.fallbackFinisherIndex = nil, nil
+        if proximity then
+            proximity.Order(entry)
+            if state then
+                if state.proximityKey ~= entry.proximityKey
+                    or proximity.MovedFrom(state.fallbackPosition) then
+                    state.fallbackIndex, state.fallbackFinisherIndex = nil, nil
+                end
                 state.proximityKey = entry.proximityKey
+                state.fallbackPosition = proximity.position
             end
         end
         local startIndex = state and state.fallbackIndex
@@ -284,7 +290,7 @@ function Core.ClickMacro(entry, entries, settings, state, preserveEntry)
         .. (friendly and "" or Core.MarkerMacro(settings, true))
 end
 
-function Core.ValidCurrentTarget(entry)
+function Core.ValidCurrentTarget(entry, allowFriendly)
     if InCombatLockdown() then return false end
     local exists, dead = UnitExists("target"), UnitIsDeadOrGhost("target")
     local player, hostile = UnitIsPlayer("target"), UnitCanAttack("player", "target")
@@ -295,7 +301,7 @@ function Core.ValidCurrentTarget(entry)
     -- Quest turn-in NPCs are friendly. Only the masterbutton's verified ready
     -- finishers qualify; a friendly NPC with an unrelated mob name does not.
     if entry.finisherNames and entry.finisherNames[name] then return true end
-    if not hostile then return false end
+    if not hostile and not allowFriendly then return false end
     return entry.names and entry.names[name] == true or (not entry.names and entry.name == name)
 end
 

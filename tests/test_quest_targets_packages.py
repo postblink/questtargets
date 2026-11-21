@@ -138,6 +138,11 @@ class PackageTests(unittest.TestCase):
                     self.assertTrue(all(n.startswith('QuestTargets/') for n in names))
                     self.assertEqual(len(names), len(set(names)))
                     self.assertIn('QuestTargets/Bindings.xml', names)
+                    for note_file in ('PatchNotes.lua', 'PatchNotesData.lua'):
+                        self.assertEqual(package.read(f'QuestTargets/{note_file}'),
+                                         (ROOT/'QuestTargets'/note_file).read_bytes())
+                    self.assertEqual(package.read('QuestTargets/RareScanner.lua'),
+                                     (ROOT/'QuestTargets/RareScanner.lua').read_bytes())
                     self.assertIn(f'## Version: {self.version}'.encode(),
                                   package.read('QuestTargets/QuestTargets.toc'))
                     self.assertFalse(any(n.endswith('.md') for n in names))
